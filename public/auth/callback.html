@@ -106,9 +106,13 @@
     sessionStorage.removeItem("rso_state");
   } catch (e) { /* sessionStorage unavailable — continue */ }
 
-  // 4) If no backend is configured, hand the code to the app and continue
+  // 4) Default: hand the validated code to the app, which performs the token
+  //    exchange against the backend (it holds the Vite env config + no secret).
   if (!BACKEND_URL) {
-    try { sessionStorage.setItem("rso_code", code); } catch (e) {}
+    try {
+      sessionStorage.setItem("rso_code", code);
+      if (state) sessionStorage.setItem("rso_code_state", state);
+    } catch (e) {}
     window.location.replace(SUCCESS_REDIRECT);
     return;
   }

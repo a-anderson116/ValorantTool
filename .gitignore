@@ -12,6 +12,9 @@ build/
 .env.*.local
 backend/.env
 
+# Runtime opt-in / consent registry (contains player PUUIDs)
+backend/data/
+
 # Vercel
 .vercel/
 

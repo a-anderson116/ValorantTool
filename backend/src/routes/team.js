@@ -2,10 +2,12 @@ const express = require('express');
 const router = express.Router();
 const { getPlayerMatches } = require('../services/henrik');
 const { aggregatePlayerStats, aggregateTeamStats } = require('../utils/stats');
+const { requireOptedInTargets } = require('../middleware/auth');
 
 // POST /api/team/scout
 // Body: { players: [{name, tag, region}], count }
-router.post('/scout', async (req, res) => {
+// Opt-in enforced: every requested player must have opted in via RSO.
+router.post('/scout', requireOptedInTargets((req) => req.body.players || []), async (req, res) => {
   const { players, count = 15 } = req.body;
   if (!Array.isArray(players) || players.length === 0) {
     return res.status(400).json({ success: false, error: 'players array required' });

@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Users, Swords, Map, FileText, Search, Settings, Trophy } from 'lucide-react'
+import { LayoutDashboard, Users, Swords, Map, FileText, Search, Trophy, LogOut } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -12,6 +13,9 @@ const navItems = [
 ]
 
 export default function Sidebar() {
+  const { session, logout } = useAuth()
+  const riotId = session?.gameName ? `${session.gameName}#${session.tagLine}` : 'Signed in'
+
   return (
     <aside className="w-16 lg:w-56 h-screen bg-val-darker border-r border-val-border flex flex-col fixed left-0 top-0 z-30">
       {/* Logo */}
@@ -48,11 +52,20 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* Season badge */}
-      <div className="p-4 border-t border-val-border hidden lg:block">
-        <div className="text-val-muted text-[10px] font-mono uppercase tracking-widest mb-1">Season</div>
-        <div className="font-display font-bold text-white text-sm">Spring 2026</div>
-        <div className="text-val-muted text-xs mt-1">CCPL — Week 8</div>
+      {/* Signed-in player + logout */}
+      <div className="p-3 border-t border-val-border">
+        <div className="hidden lg:block mb-2 px-1">
+          <div className="text-val-muted text-[10px] font-mono uppercase tracking-widest mb-0.5">Signed in</div>
+          <div className="font-display font-semibold text-white text-sm truncate" title={riotId}>{riotId}</div>
+        </div>
+        <button
+          onClick={logout}
+          title="Sign out"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-val-muted hover:text-white hover:bg-val-card transition-all"
+        >
+          <LogOut size={16} className="flex-shrink-0" />
+          <span className="hidden lg:block font-display font-semibold text-sm uppercase tracking-wider">Sign out</span>
+        </button>
       </div>
     </aside>
   )

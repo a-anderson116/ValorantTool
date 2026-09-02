@@ -1,6 +1,11 @@
 import { Bell, Search } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
 
 export default function Header({ title, subtitle }) {
+  const { session } = useAuth()
+  const initials = (session?.gameName || 'ME').slice(0, 3).toUpperCase()
+  const riotId = session?.gameName ? `${session.gameName}#${session.tagLine}` : 'Signed in'
+
   return (
     <header className="h-16 border-b border-val-border flex items-center justify-between px-6 bg-val-darker/80 backdrop-blur sticky top-0 z-20">
       <div>
@@ -20,8 +25,11 @@ export default function Header({ title, subtitle }) {
           <Bell size={15} />
           <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-val-red rounded-full"></span>
         </button>
-        <div className="w-9 h-9 rounded-md bg-val-red/20 border border-val-red/40 flex items-center justify-center">
-          <span className="font-display font-bold text-val-red text-xs">SFU</span>
+        <div
+          className="w-9 h-9 rounded-md bg-val-red/20 border border-val-red/40 flex items-center justify-center"
+          title={riotId}
+        >
+          <span className="font-display font-bold text-val-red text-xs">{initials}</span>
         </div>
       </div>
     </header>

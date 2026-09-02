@@ -1,4 +1,22 @@
+import { authHeader, BACKEND_URL } from './auth'
+
 const HENRIK_BASE = 'https://api.henrikdev.tech/valorant'
+
+/**
+ * Fetch the signed-in player's own profile, stats, and recent matches from the
+ * gated backend (/api/player/me). Requires an active RSO session.
+ */
+export async function getMyProfile({ region = 'na', count = 10 } = {}) {
+  const base = BACKEND_URL.replace(/\/$/, '')
+  const res = await fetch(`${base}/api/player/me?region=${region}&count=${count}`, {
+    headers: authHeader(),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error || `Request failed (${res.status})`)
+  }
+  return res.json()
+}
 
 export async function fetchMatchByID(matchId) {
   try {

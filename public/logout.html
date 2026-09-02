@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Signed out — VCT Scout</title>
+<meta name="robots" content="noindex" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --red: #FF4655; --teal: #00C8BE; --darker: #0a0a0e;
+    --card: #16161e; --border: #24242e; --muted: #8b8b98; --text: #e8e8f0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', system-ui, sans-serif; background: var(--darker); color: var(--text); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .card { width: 100%; max-width: 440px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 40px 36px; text-align: center; }
+  .brand { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 28px; }
+  .logo { width: 32px; height: 32px; background: var(--red); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: 'Rajdhani', sans-serif; font-weight: 700; color: #fff; font-size: 12px; }
+  .brand-name { font-family: 'Rajdhani', sans-serif; font-weight: 700; letter-spacing: 1px; font-size: 15px; }
+  .icon { font-size: 44px; margin-bottom: 16px; line-height: 1; color: var(--teal); }
+  h1 { font-family: 'Rajdhani', sans-serif; font-size: 26px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+  p { color: var(--muted); font-size: 14px; line-height: 1.6; }
+  .btn { display: inline-block; margin-top: 26px; background: var(--red); color: #fff; font-family: 'Rajdhani', sans-serif; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; font-size: 14px; padding: 12px 30px; border-radius: 6px; text-decoration: none; }
+  .btn:hover { filter: brightness(1.1); }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="brand">
+      <div class="logo">VCT</div>
+      <div class="brand-name">VCT SCOUT</div>
+    </div>
+    <div class="icon">✓</div>
+    <h1>You're signed out</h1>
+    <p>Your session has ended and local session data has been cleared. Thanks for using VCT Scout.</p>
+    <a class="btn" href="/">Return to app</a>
+  </div>
+
+<script>
+  // Clear any local session artifacts left by the app / RSO callback.
+  try {
+    sessionStorage.removeItem("rso_token");
+    sessionStorage.removeItem("rso_code");
+    sessionStorage.removeItem("rso_state");
+    localStorage.removeItem("rso_token");
+  } catch (e) { /* storage unavailable — nothing to clear */ }
+</script>
+</body>
+</html>

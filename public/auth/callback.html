@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Signing in… — VCT Scout</title>
+<meta name="robots" content="noindex" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --red: #FF4655; --teal: #00C8BE; --gold: #FFD700; --darker: #0a0a0e;
+    --card: #16161e; --border: #24242e; --muted: #8b8b98; --text: #e8e8f0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', system-ui, sans-serif; background: var(--darker); color: var(--text); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .card { width: 100%; max-width: 440px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 40px 36px; text-align: center; }
+  .brand { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 28px; }
+  .logo { width: 32px; height: 32px; background: var(--red); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: 'Rajdhani', sans-serif; font-weight: 700; color: #fff; font-size: 12px; }
+  .brand-name { font-family: 'Rajdhani', sans-serif; font-weight: 700; letter-spacing: 1px; font-size: 15px; }
+  .spinner { width: 44px; height: 44px; border: 3px solid var(--border); border-top-color: var(--red); border-radius: 50%; margin: 8px auto 22px; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .icon { font-size: 42px; margin-bottom: 14px; line-height: 1; }
+  h1 { font-family: 'Rajdhani', sans-serif; font-size: 24px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+  p { color: var(--muted); font-size: 14px; line-height: 1.6; margin-bottom: 8px; }
+  .detail { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); background: var(--darker); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; margin-top: 16px; word-break: break-all; text-align: left; display: none; }
+  .btn { display: inline-block; margin-top: 22px; background: var(--red); color: #fff; font-family: 'Rajdhani', sans-serif; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; font-size: 14px; padding: 11px 26px; border-radius: 6px; text-decoration: none; border: none; cursor: pointer; }
+  .btn:hover { filter: brightness(1.1); }
+  .btn.ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); margin-left: 8px; }
+  .ok { color: var(--teal); }
+  .err { color: var(--red); }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="brand">
+      <div class="logo">VCT</div>
+      <div class="brand-name">VCT SCOUT</div>
+    </div>
+    <div id="content">
+      <div class="spinner"></div>
+      <h1>Signing you in</h1>
+      <p>Completing Riot Sign On…</p>
+    </div>
+    <div id="detail" class="detail"></div>
+  </div>
+
+<script>
+(function () {
+  // ---- Config -------------------------------------------------------------
+  // Where to send the authorization code for server-side token exchange.
+  // Set this to your deployed backend, e.g. "https://your-backend.up.railway.app".
+  // Leave empty ("") to skip the exchange and just hand the code back to the app.
+  var BACKEND_URL = "";
+  var TOKEN_ENDPOINT = "/api/auth/token";   // backend route that exchanges the code
+  var SUCCESS_REDIRECT = "/";               // where to go after a successful login
+  // ------------------------------------------------------------------------
+
+  var params = new URLSearchParams(window.location.search);
+  var code = params.get("code");
+  var state = params.get("state");
+  var error = params.get("error");
+  var errorDesc = params.get("error_description");
+
+  var content = document.getElementById("content");
+  var detail = document.getElementById("detail");
+
+  function show(iconClass, icon, title, message, showDetailText) {
+    content.innerHTML =
+      '<div class="icon ' + iconClass + '">' + icon + '</div>' +
+      '<h1>' + title + '</h1>' +
+      '<p>' + message + '</p>' +
+      '<div><a class="btn" href="/">Go to app</a>' +
+      '<a class="btn ghost" href="/logout">Sign out</a></div>';
+    if (showDetailText) {
+      detail.style.display = "block";
+      detail.textContent = showDetailText;
+    }
+  }
+
+  // 1) RSO returned an error
+  if (error) {
+    show("err", "✕", "Sign-in failed",
+      "Riot Sign On returned an error. Please try again.",
+      error + (errorDesc ? " — " + errorDesc : ""));
+    return;
+  }
+
+  // 2) No code present — nothing to do
+  if (!code) {
+    show("err", "✕", "Invalid request",
+      "No authorization code was provided in the callback.");
+    return;
+  }
+
+  // 3) CSRF check: state must match the value stored when login started
+  try {
+    var savedState = sessionStorage.getItem("rso_state");
+    if (savedState && state && savedState !== state) {
+      show("err", "✕", "Security check failed",
+        "The sign-in request could not be verified (state mismatch). Please sign in again.");
+      return;
+    }
+    sessionStorage.removeItem("rso_state");
+  } catch (e) { /* sessionStorage unavailable — continue */ }
+
+  // 4) If no backend is configured, hand the code to the app and continue
+  if (!BACKEND_URL) {
+    try { sessionStorage.setItem("rso_code", code); } catch (e) {}
+    window.location.replace(SUCCESS_REDIRECT);
+    return;
+  }
+
+  // 5) Exchange the code for tokens via the backend (which holds the secret)
+  fetch(BACKEND_URL.replace(/\/$/, "") + TOKEN_ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ code: code, state: state })
+  })
+  .then(function (res) {
+    if (!res.ok) throw new Error("Token exchange failed (" + res.status + ")");
+    return res.json();
+  })
+  .then(function (data) {
+    if (data && data.access_token) {
+      try { sessionStorage.setItem("rso_token", data.access_token); } catch (e) {}
+    }
+    window.location.replace(SUCCESS_REDIRECT);
+  })
+  .catch(function (err) {
+    show("err", "✕", "Sign-in failed",
+      "We couldn't complete the sign-in. Please try again.",
+      String(err && err.message ? err.message : err));
+  });
+})();
+</script>
+</body>
+</html>

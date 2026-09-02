@@ -1,18 +1,20 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { getSession, login, logout, exchangeCodeIfPresent } from '../services/auth'
+import { getSession, login as startLogin, logout, exchangeCodeIfPresent, fetchRsoConfig } from '../services/auth'
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [session, setSessionState] = useState(() => getSession())
   const [loading, setLoading] = useState(true)
+  const [rsoConfig, setRsoConfig] = useState(null)
 
-  // On load: if the RSO callback left a code, exchange it for a session.
+  // On load: fetch RSO config and, if the callback left a code, exchange it.
   useEffect(() => {
     let active = true
     ;(async () => {
-      const exchanged = await exchangeCodeIfPresent()
+      const [config, exchanged] = await Promise.all([fetchRsoConfig(), exchangeCodeIfPresent()])
       if (!active) return
+      setRsoConfig(config)
       if (exchanged) setSessionState(exchanged)
       else setSessionState(getSession())
       setLoading(false)
@@ -37,7 +39,9 @@ export function AuthProvider({ children }) {
     session,
     loading,
     isAuthenticated: Boolean(session?.session),
-    login,
+    rsoConfig,
+    configured: Boolean(rsoConfig?.configured),
+    login: () => startLogin(rsoConfig),
     logout,
   }
 

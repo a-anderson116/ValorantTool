@@ -1,16 +1,20 @@
 // Riot Sign On (RSO) — browser side.
 // The browser only ever handles the authorization code + an opaque session
 // token. The confidential client secret and token exchange live on the backend.
+//
+// RSO settings (client id, redirect uri, authorize url, scope) are fetched from
+// the backend at runtime via /api/auth/config, so NO build-time VITE_ variables
+// are required. Only server-side env vars need to be set in Vercel.
 
-const AUTHORIZE_URL = import.meta.env.VITE_RSO_AUTHORIZE_URL || 'https://auth.riotgames.com/authorize'
-const CLIENT_ID = import.meta.env.VITE_RSO_CLIENT_ID || ''
-const REDIRECT_URI =
-  import.meta.env.VITE_RSO_REDIRECT_URI || `${window.location.origin}/auth/callback`
-const SCOPE = import.meta.env.VITE_RSO_SCOPE || 'openid offline_access'
+// Optional: point at a different backend origin. Left empty = same-origin /api.
 export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || ''
 
 const SESSION_KEY = 'rso_session'
 const STATE_KEY = 'rso_state'
+
+function apiBase() {
+  return BACKEND_URL.replace(/\/$/, '')
+}
 
 function randomState() {
   const bytes = new Uint8Array(16)
@@ -18,15 +22,21 @@ function randomState() {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
 }
 
-/** Whether RSO is configured (a client id is present). */
-export function isConfigured() {
-  return Boolean(CLIENT_ID)
+/** Fetch the public RSO config (client id, redirect uri, etc.) from the backend. */
+export async function fetchRsoConfig() {
+  try {
+    const res = await fetch(`${apiBase()}/api/auth/config`)
+    if (!res.ok) throw new Error(`config ${res.status}`)
+    return await res.json()
+  } catch (e) {
+    return { configured: false, clientId: '', redirectUri: '' }
+  }
 }
 
 /** Kick off the RSO login by redirecting to Riot's authorize endpoint. */
-export function login() {
-  if (!CLIENT_ID) {
-    console.warn('RSO not configured: set VITE_RSO_CLIENT_ID')
+export function login(config) {
+  if (!config?.clientId) {
+    console.warn('RSO not configured: no client id from /api/auth/config')
     return
   }
   const state = randomState()
@@ -36,13 +46,14 @@ export function login() {
     /* private mode — state check will be skipped in the callback */
   }
   const params = new URLSearchParams({
-    client_id: CLIENT_ID,
-    redirect_uri: REDIRECT_URI,
+    client_id: config.clientId,
+    redirect_uri: config.redirectUri || `${window.location.origin}/auth/callback`,
     response_type: 'code',
-    scope: SCOPE,
+    scope: config.scope || 'openid offline_access',
     state,
   })
-  window.location.href = `${AUTHORIZE_URL}?${params.toString()}`
+  const authorizeUrl = config.authorizeUrl || 'https://auth.riotgames.com/authorize'
+  window.location.href = `${authorizeUrl}?${params.toString()}`
 }
 
 /** Read the stored session (set by the callback page after a code exchange). */
@@ -72,9 +83,8 @@ export function logout() {
   } catch (e) {
     /* ignore */
   }
-  // Best-effort backend session teardown.
-  if (token && BACKEND_URL) {
-    fetch(`${BACKEND_URL.replace(/\/$/, '')}/api/auth/logout`, {
+  if (token) {
+    fetch(`${apiBase()}/api/auth/logout`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
     }).catch(() => {})
@@ -112,7 +122,7 @@ export async function exchangeCodeIfPresent() {
   }
 
   try {
-    const res = await fetch(`${BACKEND_URL.replace(/\/$/, '')}/api/auth/token`, {
+    const res = await fetch(`${apiBase()}/api/auth/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code, state }),

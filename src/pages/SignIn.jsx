@@ -1,10 +1,9 @@
 import { ShieldCheck, LogIn } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import { isConfigured, setSession } from '../services/auth'
+import { setSession } from '../services/auth'
 
 export default function SignIn() {
-  const { login } = useAuth()
-  const configured = isConfigured()
+  const { login, configured } = useAuth()
 
   // Dev-only preview bypass. Stripped from production builds (import.meta.env.DEV
   // is false in `vite build`), so it can never grant access to the deployed app.
@@ -44,8 +43,10 @@ export default function SignIn() {
 
           {!configured && (
             <p className="text-val-gold text-xs font-mono mt-4 leading-relaxed">
-              RSO not configured yet. Set <span className="text-white">VITE_RSO_CLIENT_ID</span> (and the
-              backend secret) once your Riot application is approved.
+              RSO not configured yet. Set <span className="text-white">RSO_CLIENT_ID</span>,{' '}
+              <span className="text-white">RSO_CLIENT_SECRET</span> and{' '}
+              <span className="text-white">RSO_REDIRECT_URI</span> in your Vercel environment once your
+              Riot application is approved.
             </p>
           )}
 

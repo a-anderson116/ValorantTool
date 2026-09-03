@@ -15,14 +15,8 @@ export default function SignIn() {
   return (
     <div className="min-h-screen bg-val-darker flex items-center justify-center p-6">
       <div className="w-full max-w-md">
-        <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="w-10 h-10 bg-val-red rounded flex items-center justify-center">
-            <span className="font-display font-bold text-white text-sm">VCT</span>
-          </div>
-          <div>
-            <div className="font-display font-bold text-white text-lg leading-tight">VCT SCOUT</div>
-            <div className="text-val-muted text-[10px] font-mono tracking-widest uppercase">Collegiate Tool</div>
-          </div>
+        <div className="flex items-center justify-center mb-8">
+          <img src="/logo.png" alt="VCT — Valorant Collegiate Tool" className="w-52 h-auto" />
         </div>
 
         <div className="bg-val-card border border-val-border rounded-xl p-8 text-center">

@@ -1,9 +1,11 @@
+import { useEffect, useMemo, useState } from 'react'
 import { LayoutDashboard, AlertTriangle } from 'lucide-react'
 import Header from '../components/Header'
 import EmptyState from '../components/EmptyState'
 import { StatCard } from '../components/StatCard'
 import { useAuth } from '../context/AuthContext'
 import { useMyProfile, REGIONS } from '../hooks/useMyProfile'
+import { aggregateStats, orderModes } from '../utils/stats'
 import { AGENT_COLORS } from '../data/mockData'
 
 function RegionSelect({ region, setRegion }) {
@@ -23,12 +25,29 @@ function RegionSelect({ region, setRegion }) {
 export default function Dashboard() {
   const { session } = useAuth()
   const riotId = session?.gameName ? `${session.gameName}#${session.tagLine}` : 'your account'
-  const { data, loading, error, region, setRegion } = useMyProfile(10)
+  const { data, loading, error, region, setRegion } = useMyProfile(20)
 
-  const stats = data?.stats
-  const matches = data?.matches || []
-  const wins = matches.filter((m) => m.won).length
-  const winRate = matches.length ? Math.round((wins / matches.length) * 100) : 0
+  const allMatches = data?.matches || []
+
+  // Modes present in the sample, ordered (Competitive, Custom, ... first).
+  const modes = useMemo(
+    () => orderModes(Array.from(new Set(allMatches.map((m) => m.mode).filter(Boolean)))),
+    [allMatches]
+  )
+
+  const [mode, setMode] = useState('Competitive')
+
+  // Pick a sensible default once data arrives: Competitive, then Custom, then
+  // the first available mode. 'all' is always valid.
+  useEffect(() => {
+    if (!modes.length) return
+    if (mode !== 'all' && !modes.includes(mode)) {
+      setMode(modes.includes('Competitive') ? 'Competitive' : modes.includes('Custom') ? 'Custom' : modes[0])
+    }
+  }, [modes.join('|')]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const matches = mode === 'all' ? allMatches : allMatches.filter((m) => m.mode === mode)
+  const stats = aggregateStats(matches)
 
   return (
     <div>
@@ -45,6 +64,16 @@ export default function Dashboard() {
         )}
       </div>
 
+      {/* Per-mode tabs */}
+      {!loading && !error && allMatches.length > 0 && (
+        <div className="flex flex-wrap gap-2 px-6 pt-4">
+          {modes.map((m) => (
+            <ModePill key={m} label={m} active={mode === m} onClick={() => setMode(m)} />
+          ))}
+          <ModePill label="All" active={mode === 'all'} onClick={() => setMode('all')} />
+        </div>
+      )}
+
       {loading && (
         <div className="flex justify-center py-24">
           <div className="w-8 h-8 border-2 border-val-border border-t-val-red rounded-full animate-spin" />
@@ -59,7 +88,7 @@ export default function Dashboard() {
         />
       )}
 
-      {!loading && !error && matches.length === 0 && (
+      {!loading && !error && allMatches.length === 0 && (
         <EmptyState
           icon={LayoutDashboard}
           title="No recent matches found"
@@ -67,12 +96,24 @@ export default function Dashboard() {
         />
       )}
 
+      {!loading && !error && allMatches.length > 0 && matches.length === 0 && (
+        <EmptyState
+          icon={LayoutDashboard}
+          title={`No ${mode} matches`}
+          message={`No ${mode} matches in your last ${allMatches.length}. Pick another mode above.`}
+        />
+      )}
+
       {!loading && !error && matches.length > 0 && (
         <div className="p-6 space-y-6">
+          <div className="text-val-muted text-xs font-mono uppercase tracking-wider">
+            {mode === 'all' ? 'All modes' : mode} · {stats.matchCount} matches
+          </div>
+
           {/* Stat cards */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             <StatCard label="Matches" value={stats.matchCount} />
-            <StatCard label="Win Rate" value={`${winRate}%`} accent={winRate >= 50} />
+            <StatCard label="Win Rate" value={`${stats.winRate}%`} accent={stats.winRate >= 50} />
             <StatCard label="Avg ACS" value={stats.acs} />
             <StatCard label="K/D" value={stats.kd} accent={parseFloat(stats.kd) >= 1} />
             <StatCard label="Avg ADR" value={stats.adr} />
@@ -80,7 +121,7 @@ export default function Dashboard() {
           </div>
 
           {/* Top agents */}
-          {stats.topAgents?.length > 0 && (
+          {stats.topAgents.length > 0 && (
             <div className="stat-card">
               <div className="section-label mb-3">Most Played Agents</div>
               <div className="flex flex-wrap gap-2">
@@ -100,6 +141,27 @@ export default function Dashboard() {
             </div>
           )}
 
+          {/* Map performance */}
+          {stats.maps.length > 0 && (
+            <div className="stat-card">
+              <div className="section-label mb-3">Map Performance</div>
+              <div className="space-y-2">
+                {stats.maps.map((mp) => (
+                  <div key={mp.map} className="flex items-center gap-3 text-sm">
+                    <span className="w-20 text-white">{mp.map}</span>
+                    <div className="flex-1 h-1.5 bg-val-border rounded-full overflow-hidden max-w-xs">
+                      <div
+                        className="h-full rounded-full"
+                        style={{ width: `${mp.wr}%`, background: mp.wr >= 50 ? '#00C8BE' : '#FF4655' }}
+                      />
+                    </div>
+                    <span className="font-mono text-xs text-val-muted">{mp.wins}W–{mp.losses}L · {mp.wr}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Recent matches */}
           <div className="stat-card overflow-x-auto">
             <div className="section-label mb-3">Recent Matches</div>
@@ -112,6 +174,7 @@ export default function Dashboard() {
                   <th className="text-center py-2 px-2">K / D / A</th>
                   <th className="text-center py-2 px-2">ACS</th>
                   <th className="text-center py-2 px-2">ADR</th>
+                  <th className="text-center py-2 px-2">HS%</th>
                 </tr>
               </thead>
               <tbody>
@@ -129,6 +192,7 @@ export default function Dashboard() {
                     </td>
                     <td className="py-2 px-2 text-center font-mono text-white">{m.acs}</td>
                     <td className="py-2 px-2 text-center font-mono text-val-muted">{m.adr || '—'}</td>
+                    <td className="py-2 px-2 text-center font-mono text-val-muted">{m.hsPct ? `${m.hsPct}%` : '—'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -137,5 +201,20 @@ export default function Dashboard() {
         </div>
       )}
     </div>
+  )
+}
+
+function ModePill({ label, active, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-3 py-1.5 rounded-md text-xs font-display font-semibold uppercase tracking-wider transition ${
+        active
+          ? 'bg-val-red text-white'
+          : 'bg-val-card border border-val-border text-val-muted hover:text-white'
+      }`}
+    >
+      {label}
+    </button>
   )
 }

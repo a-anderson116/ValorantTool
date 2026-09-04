@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Swords, AlertTriangle } from 'lucide-react'
 import Header from '../components/Header'
 import EmptyState from '../components/EmptyState'
 import { useMyProfile, REGIONS } from '../hooks/useMyProfile'
 
 export default function Matches() {
+  const navigate = useNavigate()
   const { data, loading, error, region, setRegion } = useMyProfile(20)
   const allMatches = data?.matches || []
   const [mode, setMode] = useState('all')
@@ -99,7 +101,11 @@ export default function Matches() {
               </thead>
               <tbody>
                 {matches.map((m) => (
-                  <tr key={m.id} className="border-t border-val-border/50">
+                  <tr
+                    key={m.id}
+                    onClick={() => navigate(`/matches/${m.id}`)}
+                    className="border-t border-val-border/50 hover:bg-val-card/60 cursor-pointer"
+                  >
                     <td className="py-2 px-2">
                       <span className={`font-display font-bold ${m.won ? 'text-val-teal' : 'text-val-red'}`}>
                         {m.won ? 'W' : 'L'}

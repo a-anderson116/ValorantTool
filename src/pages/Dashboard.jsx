@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { LayoutDashboard, AlertTriangle } from 'lucide-react'
 import Header from '../components/Header'
 import EmptyState from '../components/EmptyState'
@@ -24,6 +25,7 @@ function RegionSelect({ region, setRegion }) {
 
 export default function Dashboard() {
   const { session } = useAuth()
+  const navigate = useNavigate()
   const riotId = session?.gameName ? `${session.gameName}#${session.tagLine}` : 'your account'
   const { data, loading, error, region, setRegion } = useMyProfile(20)
 
@@ -179,7 +181,11 @@ export default function Dashboard() {
               </thead>
               <tbody>
                 {matches.map((m) => (
-                  <tr key={m.id} className="border-t border-val-border/50">
+                  <tr
+                    key={m.id}
+                    onClick={() => navigate(`/matches/${m.id}`)}
+                    className="border-t border-val-border/50 hover:bg-val-card/60 cursor-pointer"
+                  >
                     <td className="py-2 px-2">
                       <span className={`font-display font-bold ${m.won ? 'text-val-teal' : 'text-val-red'}`}>
                         {m.won ? 'W' : 'L'}

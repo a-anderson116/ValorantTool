@@ -224,6 +224,152 @@ async function fromRiot({ puuid, region, count }) {
   return { source: 'riot', matches, stats: aggregate(matches) }
 }
 
+// Competitive tier number -> rank name.
+const TIERS = [
+  'Unranked', '', '', 'Iron 1', 'Iron 2', 'Iron 3', 'Bronze 1', 'Bronze 2', 'Bronze 3',
+  'Silver 1', 'Silver 2', 'Silver 3', 'Gold 1', 'Gold 2', 'Gold 3',
+  'Platinum 1', 'Platinum 2', 'Platinum 3', 'Diamond 1', 'Diamond 2', 'Diamond 3',
+  'Ascendant 1', 'Ascendant 2', 'Ascendant 3', 'Immortal 1', 'Immortal 2', 'Immortal 3', 'Radiant',
+]
+
+function roundOutcome(rr) {
+  const code = (rr.roundResultCode || rr.roundResult || '').toLowerCase()
+  if (code.includes('detonate') || code.includes('bomb')) return 'Spike'
+  if (code.includes('defus')) return 'Defuse'
+  if (code.includes('elim')) return 'Elimination'
+  if (code.includes('surrender')) return 'Surrender'
+  if (code.includes('timer') || code.includes('time')) return 'Time'
+  return rr.roundResult || '—'
+}
+
+/**
+ * Full match detail: scoreboard (all players), round-by-round outcomes, and
+ * per-round team economy. Names are masked for everyone except `mePuuid` to
+ * honor the opt-in policy (only the signed-in player is opted in).
+ */
+export async function getMatchDetail({ matchId, region = 'na', mePuuid }) {
+  const key = process.env.RIOT_API_KEY
+  // ---- Riot source ----
+  if (key) {
+    try {
+      const host = `https://${PLATFORM[region] || 'na'}.api.riotgames.com`
+      const res = await fetch(`${host}/val/match/v1/matches/${matchId}`, {
+        headers: { 'X-Riot-Token': key },
+      })
+      if (!res.ok) throw new Error(`Riot match ${res.status}`)
+      const m = await res.json()
+      const rounds = (m.roundResults || []).length || 1
+
+      // Per-player damage/hits across rounds -> ADR, HS%.
+      const acc = {}
+      const teamByPuuid = {}
+      for (const p of m.players || []) teamByPuuid[p.puuid] = p.teamId
+      for (const rr of m.roundResults || []) {
+        for (const ps of rr.playerStats || []) {
+          const a = (acc[ps.puuid] = acc[ps.puuid] || { dmg: 0, hs: 0, bs: 0, ls: 0 })
+          for (const d of ps.damage || []) {
+            a.dmg += d.damage || 0; a.hs += d.headshots || 0
+            a.bs += d.bodyshots || 0; a.ls += d.legshots || 0
+          }
+        }
+      }
+
+      const players = (m.players || []).map((p) => {
+        const st = p.stats || {}
+        const a = acc[p.puuid] || { dmg: 0, hs: 0, bs: 0, ls: 0 }
+        const shots = a.hs + a.bs + a.ls
+        const isMe = p.puuid === mePuuid
+        return {
+          team: p.teamId,
+          agent: AGENT_NAMES[p.characterId] || p.characterId,
+          name: isMe ? `${p.gameName}#${p.tagLine}` : null, // masked otherwise
+          rank: TIERS[p.competitiveTier] || null,
+          isMe,
+          kills: st.kills || 0, deaths: st.deaths || 0, assists: st.assists || 0,
+          acs: st.score ? Math.round(st.score / rounds) : 0,
+          adr: Math.round(a.dmg / rounds),
+          hsPct: shots ? Math.round((a.hs / shots) * 100) : 0,
+        }
+      }).sort((x, y) => y.acs - x.acs)
+
+      const roundList = (m.roundResults || []).map((rr, i) => {
+        const buys = {}
+        for (const ps of rr.playerStats || []) {
+          const t = teamByPuuid[ps.puuid]
+          buys[t] = (buys[t] || 0) + (ps.economy?.loadoutValue || 0)
+        }
+        return { num: i + 1, winner: rr.winningTeam, outcome: roundOutcome(rr), buys }
+      })
+
+      const codename = (m.matchInfo?.mapId || '').split('/').pop()
+      return {
+        source: 'riot',
+        meta: {
+          id: m.matchInfo?.matchId,
+          map: MAP_NAMES[codename] || codename,
+          mode: QUEUE_NAMES[m.matchInfo?.queueId] ?? (m.matchInfo?.queueId || 'Custom'),
+          startedAt: m.matchInfo?.gameStartMillis ? new Date(m.matchInfo.gameStartMillis).toISOString() : null,
+          lengthMin: m.matchInfo?.gameLengthMillis ? Math.round(m.matchInfo.gameLengthMillis / 60000) : null,
+          teams: (m.teams || []).map((t) => ({ team: t.teamId, won: t.won, roundsWon: t.roundsWon })),
+        },
+        players,
+        rounds: roundList,
+      }
+    } catch (e) {
+      // fall through to Henrik
+    }
+  }
+
+  // ---- HenrikDev fallback ----
+  const res = await fetch(`${HENRIK_BASE}/v2/match/${matchId}`, { headers: henrikHeaders() })
+  if (!res.ok) throw new Error(`Henrik match ${res.status}`)
+  const body = await res.json()
+  const d = body.data || {}
+  const meMatch = (d.players?.all_players || []).find(
+    (p) => p.puuid === mePuuid || (mePuuid == null && false)
+  )
+  const rounds = d.metadata?.rounds_played || 1
+  const players = (d.players?.all_players || []).map((p) => {
+    const s = p.stats || {}
+    const shots = (s.headshots || 0) + (s.bodyshots || 0) + (s.legshots || 0)
+    const isMe = p.puuid === mePuuid
+    return {
+      team: p.team, agent: p.character,
+      name: isMe ? `${p.name}#${p.tag}` : null,
+      rank: p.currenttier_patched || null,
+      isMe,
+      kills: s.kills || 0, deaths: s.deaths || 0, assists: s.assists || 0,
+      acs: s.score ? Math.round(s.score / rounds) : 0,
+      adr: p.damage_made ? Math.round(p.damage_made / rounds) : 0,
+      hsPct: shots ? Math.round(((s.headshots || 0) / shots) * 100) : 0,
+    }
+  }).sort((x, y) => y.acs - x.acs)
+
+  const roundList = (d.rounds || []).map((r, i) => ({
+    num: i + 1,
+    winner: r.winning_team,
+    outcome: r.end_type || '—',
+    buys: { Red: r.bomb_planted ? null : null }, // Henrik economy is per-player; omit team totals
+  }))
+
+  return {
+    source: 'henrik',
+    meta: {
+      id: d.metadata?.matchid,
+      map: d.metadata?.map,
+      mode: d.metadata?.mode,
+      startedAt: d.metadata?.game_start_patched,
+      lengthMin: d.metadata?.game_length ? Math.round(d.metadata.game_length / 60) : null,
+      teams: [
+        { team: 'Red', won: d.teams?.red?.has_won, roundsWon: d.teams?.red?.rounds_won },
+        { team: 'Blue', won: d.teams?.blue?.has_won, roundsWon: d.teams?.blue?.rounds_won },
+      ],
+    },
+    players,
+    rounds: roundList,
+  }
+}
+
 // ---- Public entry ----------------------------------------------------------
 export async function getPlayerData({ puuid, gameName, tagLine, region = 'na', count = 10 }) {
   // Try Riot first when a key + puuid are available; fall back to Henrik on any

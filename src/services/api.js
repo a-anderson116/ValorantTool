@@ -18,6 +18,19 @@ export async function getMyProfile({ region = 'na', count = 10 } = {}) {
   return res.json()
 }
 
+/** Full detail for one match (scoreboard, rounds, economy). Requires a session. */
+export async function getMatch(id, { region = 'na' } = {}) {
+  const base = BACKEND_URL.replace(/\/$/, '')
+  const res = await fetch(`${base}/api/match/${encodeURIComponent(id)}?region=${region}`, {
+    headers: authHeader(),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error || `Request failed (${res.status})`)
+  }
+  return res.json()
+}
+
 export async function fetchMatchByID(matchId) {
   try {
     const res = await fetch(`${HENRIK_BASE}/v2/match/${matchId}`)

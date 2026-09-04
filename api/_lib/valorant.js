@@ -325,12 +325,23 @@ export async function getMatchDetail({ matchId, region = 'na', mePuuid }) {
       })
       if (!res.ok) throw new Error(`Riot match ${res.status}`)
       const m = await res.json()
+      const weaponMap = await getWeaponNames()
       const rounds = (m.roundResults || []).length || 1
 
       // Per-player damage/hits across rounds -> ADR, HS%.
       const acc = {}
       const teamByPuuid = {}
-      for (const p of m.players || []) teamByPuuid[p.puuid] = p.teamId
+      // puuid -> display identity for the kill feed (names masked except me).
+      const pmap = {}
+      for (const p of m.players || []) {
+        teamByPuuid[p.puuid] = p.teamId
+        pmap[p.puuid] = {
+          agent: AGENT_NAMES[p.characterId] || p.characterId,
+          team: p.teamId,
+          isMe: p.puuid === mePuuid,
+          name: p.puuid === mePuuid ? `${p.gameName}#${p.tagLine}` : null,
+        }
+      }
       for (const rr of m.roundResults || []) {
         for (const ps of rr.playerStats || []) {
           const a = (acc[ps.puuid] = acc[ps.puuid] || { dmg: 0, hs: 0, bs: 0, ls: 0 })
@@ -361,11 +372,27 @@ export async function getMatchDetail({ matchId, region = 'na', mePuuid }) {
 
       const roundList = (m.roundResults || []).map((rr, i) => {
         const buys = {}
+        const kills = []
         for (const ps of rr.playerStats || []) {
           const t = teamByPuuid[ps.puuid]
           buys[t] = (buys[t] || 0) + (ps.economy?.loadoutValue || 0)
+          for (const k of ps.kills || []) {
+            kills.push({
+              t: k.timeSinceRoundStartMillis ?? k.timeSinceGameStartMillis ?? 0,
+              killer: pmap[ps.puuid] || { agent: '?' },
+              victim: pmap[k.victim] || { agent: '?' },
+              weapon: killLabel(k.finishingDamage, weaponMap),
+            })
+          }
         }
-        return { num: i + 1, winner: rr.winningTeam, outcome: roundOutcome(rr), buys }
+        kills.sort((a, b) => a.t - b.t)
+        return {
+          num: i + 1,
+          winner: rr.winningTeam,
+          outcome: roundOutcome(rr),
+          buys,
+          kills: kills.map(({ t, ...rest }) => rest),
+        }
       })
 
       const codename = (m.matchInfo?.mapId || '').split('/').pop()

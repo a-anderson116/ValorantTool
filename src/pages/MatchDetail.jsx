@@ -71,6 +71,7 @@ export default function MatchDetail() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [selRound, setSelRound] = useState(1)
 
   useEffect(() => {
     let active = true
@@ -150,32 +151,69 @@ export default function MatchDetail() {
             />
           ))}
 
-          {/* Round timeline */}
-          {rounds.length > 0 && (
-            <div className="stat-card overflow-x-auto">
-              <div className="section-label mb-3">Rounds ({rounds.length})</div>
-              <div className="flex flex-wrap gap-1.5">
-                {rounds.map((r) => {
-                  const mine = r.winner === myTeam
-                  return (
-                    <div
-                      key={r.num}
-                      title={`Round ${r.num}: ${r.outcome} — ${r.winner === myTeam ? 'won' : 'lost'}`}
-                      className="w-8 h-10 rounded flex flex-col items-center justify-center text-[9px] font-mono"
-                      style={{
-                        background: (mine ? '#00C8BE' : '#FF4655') + '22',
-                        border: `1px solid ${(mine ? '#00C8BE' : '#FF4655')}66`,
-                        color: mine ? '#00C8BE' : '#FF4655',
-                      }}
-                    >
-                      <span className="font-bold">{r.num}</span>
-                      <span className="opacity-70">{r.outcome.slice(0, 4)}</span>
+          {/* Round timeline + kill feed */}
+          {rounds.length > 0 && (() => {
+            const sel = rounds.find((r) => r.num === selRound) || rounds[0]
+            return (
+              <div className="stat-card overflow-x-auto">
+                <div className="section-label mb-3">Rounds ({rounds.length}) — click a round for its kills</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {rounds.map((r) => {
+                    const mine = r.winner === myTeam
+                    const active = sel?.num === r.num
+                    const col = mine ? '#00C8BE' : '#FF4655'
+                    return (
+                      <button
+                        key={r.num}
+                        onClick={() => setSelRound(r.num)}
+                        title={`Round ${r.num}: ${r.outcome} — ${mine ? 'won' : 'lost'}`}
+                        className="w-8 h-10 rounded flex flex-col items-center justify-center text-[9px] font-mono transition"
+                        style={{
+                          background: col + (active ? '55' : '22'),
+                          border: `1px solid ${col}${active ? 'ff' : '66'}`,
+                          color: mine ? '#00C8BE' : '#FF4655',
+                        }}
+                      >
+                        <span className="font-bold">{r.num}</span>
+                        <span className="opacity-70">{r.outcome.slice(0, 4)}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {sel && (
+                  <div className="mt-4 border-t border-val-border pt-3">
+                    <div className="text-xs font-mono text-val-muted mb-2">
+                      Round {sel.num} · {sel.outcome} · won by {sel.winner === myTeam ? 'your team' : 'enemy'}
                     </div>
-                  )
-                })}
+                    {sel.kills?.length ? (
+                      <div className="space-y-1">
+                        {sel.kills.map((k, idx) => (
+                          <div key={idx} className="flex items-center gap-2 text-sm flex-wrap">
+                            <span className="text-val-muted text-[10px] font-mono w-5 text-right">{idx + 1}</span>
+                            <span className="font-display font-semibold"
+                              style={{ color: k.killer.team === myTeam ? '#00C8BE' : '#FF4655' }}>
+                              {k.killer.agent}{k.killer.isMe && <span className="text-[9px] ml-1">(You)</span>}
+                            </span>
+                            <span className="text-val-muted text-xs font-mono px-1.5 py-0.5 rounded bg-val-darker border border-val-border">
+                              {k.weapon}
+                            </span>
+                            <span className="text-val-muted">▸</span>
+                            <span className="opacity-80"
+                              style={{ color: k.victim.team === myTeam ? '#00C8BE' : '#FF4655' }}>
+                              {k.victim.agent}{k.victim.isMe && <span className="text-[9px] ml-1">(You)</span>}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-val-muted text-xs">No kills recorded this round (or unavailable from this source).</div>
+                    )}
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            )
+          })()}
 
           {/* Economy / buys per round (Riot source only) */}
           {rounds.length > 0 && rounds.some((r) => r.buys && Object.values(r.buys).some((v) => v != null)) && (

@@ -33,7 +33,7 @@ export function aggregateStats(matches) {
   if (!n) {
     return {
       matchCount: 0, wins: 0, winRate: 0, kd: '0.00', acs: 0, adr: 0, hsPct: 0,
-      topAgents: [], maps: [], agents: [], weapons: [],
+      topAgents: [], maps: [], agents: [], weapons: [], combat: null,
     }
   }
 
@@ -41,6 +41,7 @@ export function aggregateStats(matches) {
   const byAgent = {}
   const byMap = {}
   const byWeapon = {}
+  const combat = { fk: 0, fd: 0, k2: 0, k3: 0, k4: 0, aces: 0 }
 
   for (const m of matches) {
     kills += m.kills || 0
@@ -52,7 +53,15 @@ export function aggregateStats(matches) {
     if (m.agent) add((byAgent[m.agent] = byAgent[m.agent] || bucket()), m)
     if (m.map) add((byMap[m.map] = byMap[m.map] || bucket()), m)
     for (const [w, c] of Object.entries(m.weapons || {})) byWeapon[w] = (byWeapon[w] || 0) + c
+    combat.fk += m.fk || 0
+    combat.fd += m.fd || 0
+    combat.k2 += m.k2 || 0
+    combat.k3 += m.k3 || 0
+    combat.k4 += m.k4 || 0
+    combat.aces += m.k5 || 0
   }
+  combat.fkfd = combat.fd > 0 ? (combat.fk / combat.fd).toFixed(2) : String(combat.fk)
+  combat.hasData = 'fk' in (matches[0] || {})
 
   const totalWeaponKills = Object.values(byWeapon).reduce((a, b) => a + b, 0)
   const weapons = Object.entries(byWeapon)
@@ -81,6 +90,7 @@ export function aggregateStats(matches) {
     agents,
     maps,
     weapons,
+    combat,
   }
 }
 

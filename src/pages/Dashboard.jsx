@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { LayoutDashboard, AlertTriangle } from 'lucide-react'
 import Header from '../components/Header'
 import EmptyState from '../components/EmptyState'
-import { StatCard } from '../components/StatCard'
+import { StatCard, MiniStat } from '../components/StatCard'
 import { useAuth } from '../context/AuthContext'
 import { useMyProfile, REGIONS } from '../hooks/useMyProfile'
 import { aggregateStats, orderModes } from '../utils/stats'
@@ -121,6 +121,21 @@ export default function Dashboard() {
             <StatCard label="Avg ADR" value={stats.adr} />
             <StatCard label="HS%" value={`${stats.hsPct}%`} />
           </div>
+
+          {/* Combat stats */}
+          {stats.combat?.hasData && (
+            <div className="stat-card">
+              <div className="section-label mb-3">Combat</div>
+              <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+                <MiniStat label="First Bloods" value={stats.combat.fk} />
+                <MiniStat label="First Deaths" value={stats.combat.fd} />
+                <MiniStat label="FK / FD" value={stats.combat.fkfd} color={parseFloat(stats.combat.fkfd) >= 1 ? 'text-val-teal' : 'text-val-red'} />
+                <MiniStat label="Aces (5K)" value={stats.combat.aces} color="text-val-gold" />
+                <MiniStat label="4K" value={stats.combat.k4} />
+                <MiniStat label="3K / 2K" value={`${stats.combat.k3} / ${stats.combat.k2}`} />
+              </div>
+            </div>
+          )}
 
           {/* Recent form */}
           {matches.length >= 2 && (

@@ -218,8 +218,9 @@ async function fromRiot({ puuid, region, count }) {
       const st = p.stats || {}
       const teamWon = (m.teams || []).find((t) => t.teamId === p.teamId)?.won
 
-      // Sum per-round damage + hit locations (ADR / HS%) and count kills by weapon.
+      // Per-round: damage/hits (ADR, HS%), weapon kills, first blood/death, multikills.
       let dmg = 0, hs = 0, bs = 0, ls = 0
+      let fk = 0, fd = 0, k2 = 0, k3 = 0, k4 = 0, k5 = 0
       const weapons = {}
       for (const rr of m.roundResults || []) {
         const ps = (rr.playerStats || []).find((x) => x.puuid === puuid)
@@ -232,6 +233,26 @@ async function fromRiot({ puuid, region, count }) {
         for (const k of ps?.kills || []) {
           const label = killLabel(k.finishingDamage?.damageItem, weaponMap)
           weapons[label] = (weapons[label] || 0) + 1
+        }
+
+        // Multikills: how many kills the player got this round.
+        const myKills = (ps?.kills || []).length
+        if (myKills >= 5) k5++
+        else if (myKills === 4) k4++
+        else if (myKills === 3) k3++
+        else if (myKills === 2) k2++
+
+        // First blood / first death: the earliest kill in the round.
+        let first = null
+        for (const q of rr.playerStats || []) {
+          for (const k of q.kills || []) {
+            const t = k.timeSinceRoundStartMillis ?? k.timeSinceGameStartMillis ?? 0
+            if (!first || t < first.t) first = { t, killer: q.puuid, victim: k.victim }
+          }
+        }
+        if (first) {
+          if (first.killer === puuid) fk++
+          if (first.victim === puuid) fd++
         }
       }
       const shots = hs + bs + ls
@@ -254,6 +275,7 @@ async function fromRiot({ puuid, region, count }) {
         adr: Math.round(dmg / rounds),
         hsPct: shots ? Math.round((hs / shots) * 100) : 0,
         weapons,
+        fk, fd, k2, k3, k4, k5,
       }
     })
     .filter(Boolean)

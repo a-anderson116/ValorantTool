@@ -20,7 +20,7 @@ const PLATFORM = { na: 'na', latam: 'na', br: 'br', eu: 'eu', kr: 'kr', ap: 'ap'
 const MAP_NAMES = {
   Ascent: 'Ascent', Duality: 'Bind', Triad: 'Haven', Bonsai: 'Split',
   Port: 'Icebox', Foxtrot: 'Breeze', Canyon: 'Fracture', Jam: 'Lotus',
-  Pitt: 'Pearl', Juliett: 'Sunset', Infinity: 'Abyss',
+  Pitt: 'Pearl', Juliett: 'Sunset', Infinity: 'Abyss', Plummet: 'Summit',
   District: 'District', Kasbah: 'Kasbah', Drift: 'Drift', Piazza: 'Piazza', Glitch: 'Glitch',
 }
 

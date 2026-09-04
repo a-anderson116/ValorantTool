@@ -83,9 +83,12 @@ async function getWeaponNames() {
   return _weaponMap
 }
 
-// Agent ability "weapons" not present in the content DB (e.g. Chamber's).
+// Agent ability "weapons" not present in the content DB (keys lowercased).
+// Add more as their raw damageItem ids are identified.
 const ABILITY_WEAPONS = {
-  // filled in as we identify raw damageItem ids
+  '856d9a7e-4b06-dc37-15dc-9d809c37cb90': 'Headhunter', // Chamber Q
+  // '<uuid>': 'Tour de Force',  // Chamber ultimate
+  // '<uuid>': 'Blade Storm',    // Jett knives ultimate
 }
 
 // Classify a Riot finishingDamage object into a weapon/ability/other label.

@@ -122,6 +122,31 @@ export default function Dashboard() {
             <StatCard label="HS%" value={`${stats.hsPct}%`} />
           </div>
 
+          {/* Recent form */}
+          {matches.length >= 2 && (
+            <div className="stat-card">
+              <div className="section-label mb-3">Recent Form (oldest → newest)</div>
+              <div className="flex flex-wrap gap-1 mb-3">
+                {[...matches].reverse().map((m, i) => (
+                  <span
+                    key={i}
+                    title={`${m.map} · ${m.acs} ACS · ${m.kills}/${m.deaths}/${m.assists}`}
+                    className="w-5 h-5 rounded flex items-center justify-center text-[9px] font-mono font-bold"
+                    style={{
+                      background: (m.won ? '#00C8BE' : '#FF4655') + '22',
+                      color: m.won ? '#00C8BE' : '#FF4655',
+                      border: `1px solid ${(m.won ? '#00C8BE' : '#FF4655')}55`,
+                    }}
+                  >
+                    {m.won ? 'W' : 'L'}
+                  </span>
+                ))}
+              </div>
+              <Sparkline values={[...matches].reverse().map((m) => m.acs)} />
+              <div className="text-val-muted text-[10px] font-mono mt-1">ACS per match</div>
+            </div>
+          )}
+
           {/* Top agents */}
           {stats.topAgents.length > 0 && (
             <div className="stat-card">
@@ -285,6 +310,26 @@ export default function Dashboard() {
         </div>
       )}
     </div>
+  )
+}
+
+function Sparkline({ values }) {
+  if (!values || values.length < 2) return null
+  const w = 320, h = 48, pad = 4
+  const max = Math.max(...values)
+  const min = Math.min(...values)
+  const range = max - min || 1
+  const pts = values
+    .map((v, i) => {
+      const x = pad + (i * (w - 2 * pad)) / (values.length - 1)
+      const y = h - pad - ((v - min) / range) * (h - 2 * pad)
+      return `${x.toFixed(1)},${y.toFixed(1)}`
+    })
+    .join(' ')
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className="w-full max-w-md" preserveAspectRatio="none">
+      <polyline points={pts} fill="none" stroke="#00C8BE" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+    </svg>
   )
 }
 

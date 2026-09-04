@@ -143,24 +143,82 @@ export default function Dashboard() {
             </div>
           )}
 
+          {/* Agent breakdown */}
+          {stats.agents.length > 0 && (
+            <div className="stat-card overflow-x-auto">
+              <div className="section-label mb-3">Agent Breakdown</div>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-val-muted text-[10px] font-mono uppercase">
+                    <th className="text-left py-2 px-2">Agent</th>
+                    <th className="text-center py-2 px-2">Matches</th>
+                    <th className="text-center py-2 px-2">Win Rate</th>
+                    <th className="text-center py-2 px-2">K/D</th>
+                    <th className="text-center py-2 px-2">ACS</th>
+                    <th className="text-center py-2 px-2">ADR</th>
+                    <th className="text-center py-2 px-2">HS%</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stats.agents.map((a) => {
+                    const c = AGENT_COLORS[a.agent] || '#7B9BAF'
+                    return (
+                      <tr key={a.agent} className="border-t border-val-border/50">
+                        <td className="py-2 px-2">
+                          <span className="text-xs font-mono px-1.5 py-0.5 rounded"
+                            style={{ background: c + '22', color: c, border: `1px solid ${c}55` }}>
+                            {a.agent}
+                          </span>
+                        </td>
+                        <td className="py-2 px-2 text-center font-mono text-white">{a.matches}</td>
+                        <td className="py-2 px-2 text-center font-mono"
+                          style={{ color: a.wr >= 50 ? '#00C8BE' : '#FF4655' }}>{a.wr}%</td>
+                        <td className="py-2 px-2 text-center font-mono text-white">{a.kd}</td>
+                        <td className="py-2 px-2 text-center font-mono text-white">{a.acs}</td>
+                        <td className="py-2 px-2 text-center font-mono text-val-muted">{a.adr || '—'}</td>
+                        <td className="py-2 px-2 text-center font-mono text-val-muted">{a.hsPct ? `${a.hsPct}%` : '—'}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
           {/* Map performance */}
           {stats.maps.length > 0 && (
-            <div className="stat-card">
+            <div className="stat-card overflow-x-auto">
               <div className="section-label mb-3">Map Performance</div>
-              <div className="space-y-2">
-                {stats.maps.map((mp) => (
-                  <div key={mp.map} className="flex items-center gap-3 text-sm">
-                    <span className="w-20 text-white">{mp.map}</span>
-                    <div className="flex-1 h-1.5 bg-val-border rounded-full overflow-hidden max-w-xs">
-                      <div
-                        className="h-full rounded-full"
-                        style={{ width: `${mp.wr}%`, background: mp.wr >= 50 ? '#00C8BE' : '#FF4655' }}
-                      />
-                    </div>
-                    <span className="font-mono text-xs text-val-muted">{mp.wins}W–{mp.losses}L · {mp.wr}%</span>
-                  </div>
-                ))}
-              </div>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-val-muted text-[10px] font-mono uppercase">
+                    <th className="text-left py-2 px-2">Map</th>
+                    <th className="text-left py-2 px-2 w-40">Win Rate</th>
+                    <th className="text-center py-2 px-2">Record</th>
+                    <th className="text-center py-2 px-2">K/D</th>
+                    <th className="text-center py-2 px-2">ACS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stats.maps.map((mp) => (
+                    <tr key={mp.map} className="border-t border-val-border/50">
+                      <td className="py-2 px-2 text-white">{mp.map}</td>
+                      <td className="py-2 px-2">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-1.5 bg-val-border rounded-full overflow-hidden">
+                            <div className="h-full rounded-full"
+                              style={{ width: `${mp.wr}%`, background: mp.wr >= 50 ? '#00C8BE' : '#FF4655' }} />
+                          </div>
+                          <span className="font-mono text-xs text-val-muted w-9 text-right">{mp.wr}%</span>
+                        </div>
+                      </td>
+                      <td className="py-2 px-2 text-center font-mono text-val-muted">{mp.wins}W–{mp.losses}L</td>
+                      <td className="py-2 px-2 text-center font-mono text-white">{mp.kd}</td>
+                      <td className="py-2 px-2 text-center font-mono text-white">{mp.acs}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
 

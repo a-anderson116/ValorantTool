@@ -1,15 +1,45 @@
 // Aggregate a set of normalized matches into display stats. Runs client-side so
 // the Dashboard can recompute stats for any mode selection without re-fetching.
 
+// Empty bucket for per-agent / per-map grouping.
+function bucket() {
+  return { matches: 0, wins: 0, kills: 0, deaths: 0, acs: 0, adr: 0, hs: 0 }
+}
+function add(b, m) {
+  b.matches++
+  if (m.won) b.wins++
+  b.kills += m.kills || 0
+  b.deaths += m.deaths || 0
+  b.acs += m.acs || 0
+  b.adr += m.adr || 0
+  b.hs += m.hsPct || 0
+}
+function summarize(key, b) {
+  return {
+    key,
+    matches: b.matches,
+    wins: b.wins,
+    losses: b.matches - b.wins,
+    wr: Math.round((b.wins / b.matches) * 100),
+    kd: b.deaths > 0 ? (b.kills / b.deaths).toFixed(2) : b.kills.toFixed(2),
+    acs: Math.round(b.acs / b.matches),
+    adr: Math.round(b.adr / b.matches),
+    hsPct: Math.round(b.hs / b.matches),
+  }
+}
+
 export function aggregateStats(matches) {
   const n = matches.length
   if (!n) {
-    return { matchCount: 0, wins: 0, winRate: 0, kd: '0.00', acs: 0, adr: 0, hsPct: 0, topAgents: [], maps: [] }
+    return {
+      matchCount: 0, wins: 0, winRate: 0, kd: '0.00', acs: 0, adr: 0, hsPct: 0,
+      topAgents: [], maps: [], agents: [],
+    }
   }
 
   let kills = 0, deaths = 0, acs = 0, adr = 0, hs = 0, wins = 0
-  const agentCounts = {}
-  const mapStats = {}
+  const byAgent = {}
+  const byMap = {}
 
   for (const m of matches) {
     kills += m.kills || 0
@@ -18,21 +48,19 @@ export function aggregateStats(matches) {
     adr += m.adr || 0
     hs += m.hsPct || 0
     if (m.won) wins++
-    if (m.agent) agentCounts[m.agent] = (agentCounts[m.agent] || 0) + 1
-    if (m.map) {
-      if (!mapStats[m.map]) mapStats[m.map] = { wins: 0, losses: 0 }
-      m.won ? mapStats[m.map].wins++ : mapStats[m.map].losses++
-    }
+    if (m.agent) add((byAgent[m.agent] = byAgent[m.agent] || bucket()), m)
+    if (m.map) add((byMap[m.map] = byMap[m.map] || bucket()), m)
   }
 
-  const topAgents = Object.entries(agentCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([agent, count]) => ({ agent, count, pct: Math.round((count / n) * 100) }))
+  const agents = Object.entries(byAgent)
+    .map(([k, b]) => ({ ...summarize(k, b), agent: k, pct: Math.round((b.matches / n) * 100) }))
+    .sort((a, b) => b.matches - a.matches)
 
-  const maps = Object.entries(mapStats)
-    .map(([map, { wins: w, losses: l }]) => ({ map, wins: w, losses: l, wr: Math.round((w / (w + l)) * 100) }))
-    .sort((a, b) => b.wins + b.losses - (a.wins + a.losses))
+  const maps = Object.entries(byMap)
+    .map(([k, b]) => ({ ...summarize(k, b), map: k }))
+    .sort((a, b) => b.matches - a.matches)
+
+  const topAgents = agents.slice(0, 5).map((a) => ({ agent: a.agent, count: a.matches, pct: a.pct }))
 
   return {
     matchCount: n,
@@ -43,6 +71,7 @@ export function aggregateStats(matches) {
     adr: Math.round(adr / n),
     hsPct: Math.round(hs / n),
     topAgents,
+    agents,
     maps,
   }
 }

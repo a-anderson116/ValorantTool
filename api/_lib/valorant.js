@@ -83,15 +83,23 @@ async function getWeaponNames() {
   return _weaponMap
 }
 
-// Classify a Riot finishingDamage.damageItem into a weapon/ability/other label.
-function killLabel(damageItem, weaponMap) {
-  if (!damageItem) return 'Other'
-  const lc = String(damageItem).toLowerCase()
+// Agent ability "weapons" not present in the content DB (e.g. Chamber's).
+const ABILITY_WEAPONS = {
+  // filled in as we identify raw damageItem ids
+}
+
+// Classify a Riot finishingDamage object into a weapon/ability/other label.
+function killLabel(fd, weaponMap) {
+  const item = fd?.damageItem
+  const type = fd?.damageType
+  if (!item) return 'Other'
+  const lc = String(item).toLowerCase()
   if (weaponMap[lc]) return weaponMap[lc]
-  if (/ability|grenade|ultimate|primary/.test(lc)) return 'Ability'
-  if (/melee/.test(lc)) return 'Melee'
-  if (/bomb/.test(lc)) return 'Spike'
-  return 'Other'
+  if (ABILITY_WEAPONS[lc]) return ABILITY_WEAPONS[lc]
+  if (type === 'Bomb' || /bomb/.test(lc)) return 'Spike'
+  if (type === 'Melee' || /melee/.test(lc)) return 'Melee'
+  if (type === 'Ability' || /ability|grenade|ultimate|primary/.test(lc)) return 'Ability'
+  return String(item) // surface raw id so unknown items (e.g. Chamber's) are identifiable
 }
 
 // ---- Normalized shapes -----------------------------------------------------
@@ -231,7 +239,7 @@ async function fromRiot({ puuid, region, count }) {
           ls += d.legshots || 0
         }
         for (const k of ps?.kills || []) {
-          const label = killLabel(k.finishingDamage?.damageItem, weaponMap)
+          const label = killLabel(k.finishingDamage, weaponMap)
           weapons[label] = (weapons[label] || 0) + 1
         }
 

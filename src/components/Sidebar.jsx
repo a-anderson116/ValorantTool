@@ -18,9 +18,10 @@ export default function Sidebar() {
 
   return (
     <aside className="w-16 lg:w-56 h-screen bg-val-darker border-r border-val-border flex flex-col fixed left-0 top-0 z-30">
-      {/* Logo */}
+      {/* Logo — emblem when collapsed, full lockup when expanded */}
       <div className="flex items-center justify-center px-3 py-4 border-b border-val-border">
-        <img src="/logo.png" alt="VCT — Valorant Collegiate Tool" className="w-9 lg:w-36 h-auto" />
+        <img src="/emblem.png" alt="VCT Scout" className="w-10 h-10 object-contain lg:hidden" />
+        <img src="/logo.png" alt="VCT — Valorant Collegiate Tool" className="hidden lg:block w-36 h-auto" />
       </div>
 
       {/* Nav */}

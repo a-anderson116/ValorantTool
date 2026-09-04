@@ -33,13 +33,14 @@ export function aggregateStats(matches) {
   if (!n) {
     return {
       matchCount: 0, wins: 0, winRate: 0, kd: '0.00', acs: 0, adr: 0, hsPct: 0,
-      topAgents: [], maps: [], agents: [],
+      topAgents: [], maps: [], agents: [], weapons: [],
     }
   }
 
   let kills = 0, deaths = 0, acs = 0, adr = 0, hs = 0, wins = 0
   const byAgent = {}
   const byMap = {}
+  const byWeapon = {}
 
   for (const m of matches) {
     kills += m.kills || 0
@@ -50,7 +51,13 @@ export function aggregateStats(matches) {
     if (m.won) wins++
     if (m.agent) add((byAgent[m.agent] = byAgent[m.agent] || bucket()), m)
     if (m.map) add((byMap[m.map] = byMap[m.map] || bucket()), m)
+    for (const [w, c] of Object.entries(m.weapons || {})) byWeapon[w] = (byWeapon[w] || 0) + c
   }
+
+  const totalWeaponKills = Object.values(byWeapon).reduce((a, b) => a + b, 0)
+  const weapons = Object.entries(byWeapon)
+    .map(([name, kills]) => ({ name, kills, pct: totalWeaponKills ? Math.round((kills / totalWeaponKills) * 100) : 0 }))
+    .sort((a, b) => b.kills - a.kills)
 
   const agents = Object.entries(byAgent)
     .map(([k, b]) => ({ ...summarize(k, b), agent: k, pct: Math.round((b.matches / n) * 100) }))
@@ -73,6 +80,7 @@ export function aggregateStats(matches) {
     topAgents,
     agents,
     maps,
+    weapons,
   }
 }
 

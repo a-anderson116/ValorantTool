@@ -222,6 +222,26 @@ export default function Dashboard() {
             </div>
           )}
 
+          {/* Weapon breakdown */}
+          {stats.weapons.length > 0 && (
+            <div className="stat-card">
+              <div className="section-label mb-3">Weapon Kills</div>
+              <div className="space-y-2">
+                {stats.weapons.slice(0, 10).map((w) => (
+                  <div key={w.name} className="flex items-center gap-3 text-sm">
+                    <span className="w-24 text-white truncate" title={w.name}>{w.name}</span>
+                    <div className="flex-1 h-1.5 bg-val-border rounded-full overflow-hidden max-w-md">
+                      <div className="h-full rounded-full bg-val-red" style={{ width: `${w.pct}%` }} />
+                    </div>
+                    <span className="font-mono text-xs text-val-muted w-24 text-right">
+                      {w.kills} kills · {w.pct}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Recent matches */}
           <div className="stat-card overflow-x-auto">
             <div className="section-label mb-3">Recent Matches</div>

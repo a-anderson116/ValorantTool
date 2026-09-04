@@ -66,6 +66,34 @@ function henrikHeaders() {
   return process.env.HENRIK_API_KEY ? { Authorization: process.env.HENRIK_API_KEY } : {}
 }
 
+// Weapon UUID -> display name, fetched once from the public content DB and cached
+// on the warm instance (avoids hardcoding UUIDs that change when Riot adds guns).
+let _weaponMap = null
+async function getWeaponNames() {
+  if (_weaponMap) return _weaponMap
+  try {
+    const res = await fetch('https://valorant-api.com/v1/weapons')
+    const body = await res.json()
+    const map = {}
+    for (const w of body.data || []) map[String(w.uuid).toLowerCase()] = w.displayName
+    _weaponMap = map
+  } catch {
+    _weaponMap = {}
+  }
+  return _weaponMap
+}
+
+// Classify a Riot finishingDamage.damageItem into a weapon/ability/other label.
+function killLabel(damageItem, weaponMap) {
+  if (!damageItem) return 'Other'
+  const lc = String(damageItem).toLowerCase()
+  if (weaponMap[lc]) return weaponMap[lc]
+  if (/ability|grenade|ultimate|primary/.test(lc)) return 'Ability'
+  if (/melee/.test(lc)) return 'Melee'
+  if (/bomb/.test(lc)) return 'Spike'
+  return 'Other'
+}
+
 // ---- Normalized shapes -----------------------------------------------------
 // match: { id, map, mode, startedAt, agent, won, kills, deaths, assists, acs, adr, hsPct }
 // stats: { matchCount, kills, deaths, assists, kd, acs, adr, hsPct, topAgents, maps }
@@ -170,13 +198,16 @@ async function fromRiot({ puuid, region, count }) {
   const list = await listRes.json()
   const ids = (list.history || []).slice(0, count).map((h) => h.matchId)
 
-  const details = await Promise.all(
-    ids.map((id) =>
-      fetch(`${host}/val/match/v1/matches/${id}`, { headers: { 'X-Riot-Token': key } })
-        .then((r) => (r.ok ? r.json() : null))
-        .catch(() => null)
-    )
-  )
+  const [details, weaponMap] = await Promise.all([
+    Promise.all(
+      ids.map((id) =>
+        fetch(`${host}/val/match/v1/matches/${id}`, { headers: { 'X-Riot-Token': key } })
+          .then((r) => (r.ok ? r.json() : null))
+          .catch(() => null)
+      )
+    ),
+    getWeaponNames(),
+  ])
 
   const matches = details
     .filter(Boolean)
@@ -187,8 +218,9 @@ async function fromRiot({ puuid, region, count }) {
       const st = p.stats || {}
       const teamWon = (m.teams || []).find((t) => t.teamId === p.teamId)?.won
 
-      // Sum per-round damage + hit locations for this player (ADR / HS%).
+      // Sum per-round damage + hit locations (ADR / HS%) and count kills by weapon.
       let dmg = 0, hs = 0, bs = 0, ls = 0
+      const weapons = {}
       for (const rr of m.roundResults || []) {
         const ps = (rr.playerStats || []).find((x) => x.puuid === puuid)
         for (const d of ps?.damage || []) {
@@ -196,6 +228,10 @@ async function fromRiot({ puuid, region, count }) {
           hs += d.headshots || 0
           bs += d.bodyshots || 0
           ls += d.legshots || 0
+        }
+        for (const k of ps?.kills || []) {
+          const label = killLabel(k.finishingDamage?.damageItem, weaponMap)
+          weapons[label] = (weapons[label] || 0) + 1
         }
       }
       const shots = hs + bs + ls
@@ -217,6 +253,7 @@ async function fromRiot({ puuid, region, count }) {
         acs: st.score ? Math.round(st.score / rounds) : 0,
         adr: Math.round(dmg / rounds),
         hsPct: shots ? Math.round((hs / shots) * 100) : 0,
+        weapons,
       }
     })
     .filter(Boolean)

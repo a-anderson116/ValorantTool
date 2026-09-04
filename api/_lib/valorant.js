@@ -91,18 +91,19 @@ const ABILITY_WEAPONS = {
   // '<uuid>': 'Blade Storm',    // Jett knives ultimate
 }
 
-// Classify a Riot finishingDamage object into a weapon/ability/other label.
+// Classify a Riot finishingDamage object into a weapon/ability label.
 function killLabel(fd, weaponMap) {
   const item = fd?.damageItem
   const type = fd?.damageType
-  if (!item) return 'Other'
-  const lc = String(item).toLowerCase()
-  if (weaponMap[lc]) return weaponMap[lc]
-  if (ABILITY_WEAPONS[lc]) return ABILITY_WEAPONS[lc]
+  const lc = item ? String(item).toLowerCase() : ''
+  if (lc && weaponMap[lc]) return weaponMap[lc]
+  if (lc && ABILITY_WEAPONS[lc]) return ABILITY_WEAPONS[lc]
   if (type === 'Bomb' || /bomb/.test(lc)) return 'Spike'
   if (type === 'Melee' || /melee/.test(lc)) return 'Melee'
   if (type === 'Ability' || /ability|grenade|ultimate|primary/.test(lc)) return 'Ability'
-  return String(item) // surface raw id so unknown items (e.g. Chamber's) are identifiable
+  // Unknown weapon-type id: surface it so a distinct ability-weapon (like
+  // Chamber's Headhunter) can be identified and named. No id at all -> ability.
+  return lc ? String(item) : 'Ability'
 }
 
 // ---- Normalized shapes -----------------------------------------------------

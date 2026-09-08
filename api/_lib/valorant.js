@@ -474,6 +474,27 @@ export async function getMatchDetail({ matchId, region = 'na', mePuuid, unmaskAl
   }
 }
 
+// region -> Riot Account-v1 routing host
+const ACCT_HOST = { na: 'americas', latam: 'americas', br: 'americas', eu: 'europe', kr: 'asia', ap: 'asia' }
+
+/** Resolve a Riot ID (gameName#tagLine) to a PUUID via Account-v1. */
+export async function resolvePuuid(gameName, tagLine, region = 'na') {
+  const key = process.env.RIOT_API_KEY
+  if (!key || !gameName || !tagLine) return null
+  const host = `https://${ACCT_HOST[region] || 'americas'}.api.riotgames.com`
+  try {
+    const res = await fetch(
+      `${host}/riot/account/v1/accounts/by-riot-id/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`,
+      { headers: { 'X-Riot-Token': key } }
+    )
+    if (!res.ok) return null
+    const d = await res.json()
+    return d.puuid || null
+  } catch (e) {
+    return null
+  }
+}
+
 // ---- Public entry ----------------------------------------------------------
 export async function getPlayerData({ puuid, gameName, tagLine, region = 'na', count = 10 }) {
   // Try Riot first when a key + puuid are available; fall back to Henrik on any

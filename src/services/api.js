@@ -18,6 +18,18 @@ export async function getMyProfile({ region = 'na', count = 10 } = {}) {
   return res.json()
 }
 
+/** Admin-only player search by Riot ID. Requires an admin session. */
+export async function searchPlayer({ name, tag, region = 'na' }) {
+  const base = BACKEND_URL.replace(/\/$/, '')
+  const params = new URLSearchParams({ name, tag, region })
+  const res = await fetch(`${base}/api/player/search?${params.toString()}`, { headers: authHeader() })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error || `Request failed (${res.status})`)
+  }
+  return res.json()
+}
+
 /** Full detail for one match (scoreboard, rounds, economy). Requires a session. */
 export async function getMatch(id, { region = 'na' } = {}) {
   const base = BACKEND_URL.replace(/\/$/, '')

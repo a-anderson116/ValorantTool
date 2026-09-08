@@ -135,6 +135,7 @@ export async function exchangeCodeIfPresent() {
       puuid: data.puuid,
       gameName: data.gameName,
       tagLine: data.tagLine,
+      admin: Boolean(data.admin),
     }
     setSession(session)
     return session

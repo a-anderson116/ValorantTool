@@ -39,6 +39,7 @@ export function AuthProvider({ children }) {
     session,
     loading,
     isAuthenticated: Boolean(session?.session),
+    isAdmin: Boolean(session?.admin),
     rsoConfig,
     configured: Boolean(rsoConfig?.configured),
     login: () => startLogin(rsoConfig),

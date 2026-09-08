@@ -1,4 +1,4 @@
-import { signSession } from '../_lib/session.js'
+import { signSession, isAdmin } from '../_lib/session.js'
 import { recordOptIn } from '../_lib/optinStore.js'
 
 /**
@@ -88,9 +88,10 @@ export default async function handler(req, res) {
     // 3) Signing in IS the opt-in. Record it in the shared registry so this
     //    player is recognized (un-masked) across the app, then issue a session.
     await recordOptIn({ puuid, gameName, tagLine })
-    const session = signSession({ puuid, gameName, tagLine, optedIn: true })
+    const admin = isAdmin({ puuid, gameName, tagLine })
+    const session = signSession({ puuid, gameName, tagLine, optedIn: true, admin })
 
-    return res.json({ success: true, session, puuid, gameName, tagLine })
+    return res.json({ success: true, session, puuid, gameName, tagLine, admin })
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message || 'Sign-in failed' })
   }

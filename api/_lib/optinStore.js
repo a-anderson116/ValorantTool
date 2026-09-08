@@ -31,6 +31,11 @@ async function cmd(args) {
   return data.result
 }
 
+/** Raw Redis command passthrough for other stores (e.g. teams). */
+export async function kvCmd(args) {
+  return cmd(args)
+}
+
 /** Record (or refresh) a player's opt-in consent. */
 export async function recordOptIn({ puuid, gameName, tagLine }) {
   if (!puuid || !kvConfigured()) return

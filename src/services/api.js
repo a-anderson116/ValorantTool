@@ -18,6 +18,40 @@ export async function getMyProfile({ region = 'na', count = 10 } = {}) {
   return res.json()
 }
 
+// ---- Teams (per-account) ---------------------------------------------------
+export async function listTeams() {
+  const res = await fetch(`${BACKEND_URL.replace(/\/$/, '')}/api/teams`, { headers: authHeader() })
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `Failed (${res.status})`)
+  return res.json()
+}
+
+export async function saveTeam(team) {
+  const res = await fetch(`${BACKEND_URL.replace(/\/$/, '')}/api/teams`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    body: JSON.stringify(team),
+  })
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `Failed (${res.status})`)
+  return res.json()
+}
+
+export async function deleteTeam(id) {
+  const res = await fetch(`${BACKEND_URL.replace(/\/$/, '')}/api/teams?id=${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: authHeader(),
+  })
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `Failed (${res.status})`)
+  return res.json()
+}
+
+export async function teamStats(id) {
+  const res = await fetch(`${BACKEND_URL.replace(/\/$/, '')}/api/teams/stats?id=${encodeURIComponent(id)}`, {
+    headers: authHeader(),
+  })
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `Failed (${res.status})`)
+  return res.json()
+}
+
 /** Admin-only player search by Riot ID. Requires an admin session. */
 export async function searchPlayer({ name, tag, region = 'na' }) {
   const base = BACKEND_URL.replace(/\/$/, '')

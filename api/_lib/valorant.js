@@ -54,6 +54,7 @@ const AGENT_NAMES = {
   'eb93336a-449b-9c1b-0a54-a891f7921d69': 'Phoenix',
   'f94c3b30-42be-e959-889c-5aa313dba261': 'Raze',
   'a3bfb853-43b2-7238-a4f1-ad90e9e46bcf': 'Reyna',
+  'a3bfb853-43b2-7238-a4f1-ad90e9e46bcc': 'Reyna',
   '569fdd95-4d10-43ab-ca70-79becc718b46': 'Sage',
   '6f2a04ca-43e0-be17-7f36-b3908627744d': 'Skye',
   '320b2a48-4d9b-a075-30f1-1f93a9b638fa': 'Sova',

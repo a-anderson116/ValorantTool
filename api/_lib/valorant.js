@@ -59,7 +59,7 @@ const AGENT_NAMES = {
   '6f2a04ca-43e0-be17-7f36-b3908627744d': 'Skye',
   '320b2a48-4d9b-a075-30f1-1f93a9b638fa': 'Sova',
   '707eab51-4836-f488-046a-cda6bf494859': 'Viper',
-  '7f94d92c-4234-0a36-9646-3a87eb8b06fe': 'Yoru',
+  '7f94d92c-4234-0a36-9646-3a87eb8b5c89': 'Yoru',
   'efba5359-4016-a1e5-7626-b1ae76895940': 'Vyse',
   'df1cb487-4902-002e-5c17-d28e83e78588': 'Waylay',
   'b444168c-4e35-8076-db47-ef9bf368f384': 'Tejo',
@@ -93,6 +93,26 @@ const ABILITY_WEAPONS = {
   '856d9a7e-4b06-dc37-15dc-9d809c37cb90': 'Headhunter', // Chamber Q
   // '<uuid>': 'Tour de Force',  // Chamber ultimate
   // '<uuid>': 'Blade Storm',    // Jett knives ultimate
+}
+
+// Agent characterId -> display name, from the content DB (authoritative), merged
+// over the offline AGENT_NAMES fallback. Cached on the warm instance.
+let _agentMap = null
+async function getAgentNames() {
+  if (_agentMap) return _agentMap
+  const map = { ...AGENT_NAMES }
+  try {
+    const res = await fetch('https://valorant-api.com/v1/agents?isPlayableCharacter=true')
+    const body = await res.json()
+    for (const a of body.data || []) map[String(a.uuid).toLowerCase()] = a.displayName
+  } catch {
+    /* keep offline fallback */
+  }
+  _agentMap = map
+  return _agentMap
+}
+function agentName(id, agentMap) {
+  return agentMap[String(id || '').toLowerCase()] || id
 }
 
 // Classify a Riot finishingDamage object into a weapon/ability label.
@@ -214,7 +234,7 @@ async function fromRiot({ puuid, region, count }) {
   const list = await listRes.json()
   const ids = (list.history || []).slice(0, count).map((h) => h.matchId)
 
-  const [details, weaponMap] = await Promise.all([
+  const [details, weaponMap, agentMap] = await Promise.all([
     Promise.all(
       ids.map((id) =>
         fetch(`${host}/val/match/v1/matches/${id}`, { headers: { 'X-Riot-Token': key } })
@@ -223,6 +243,7 @@ async function fromRiot({ puuid, region, count }) {
       )
     ),
     getWeaponNames(),
+    getAgentNames(),
   ])
 
   const matches = details
@@ -282,7 +303,7 @@ async function fromRiot({ puuid, region, count }) {
         startedAt: m.matchInfo?.gameStartMillis
           ? new Date(m.matchInfo.gameStartMillis).toISOString()
           : null,
-        agent: AGENT_NAMES[p.characterId] || p.characterId,
+        agent: agentName(p.characterId, agentMap),
         won: Boolean(teamWon),
         kills: st.kills || 0,
         deaths: st.deaths || 0,
@@ -333,7 +354,7 @@ export async function getMatchDetail({ matchId, region = 'na', mePuuid, unmaskAl
       })
       if (!res.ok) throw new Error(`Riot match ${res.status}`)
       const m = await res.json()
-      const weaponMap = await getWeaponNames()
+      const [weaponMap, agentMap] = await Promise.all([getWeaponNames(), getAgentNames()])
       const rounds = (m.roundResults || []).length || 1
       // Names to un-mask: players who have opted in (plus me).
       const opted = await optedInNames((m.players || []).map((p) => p.puuid))
@@ -346,7 +367,7 @@ export async function getMatchDetail({ matchId, region = 'na', mePuuid, unmaskAl
       for (const p of m.players || []) {
         teamByPuuid[p.puuid] = p.teamId
         pmap[p.puuid] = {
-          agent: AGENT_NAMES[p.characterId] || p.characterId,
+          agent: agentName(p.characterId, agentMap),
           team: p.teamId,
           isMe: p.puuid === mePuuid,
           name:
@@ -372,7 +393,7 @@ export async function getMatchDetail({ matchId, region = 'na', mePuuid, unmaskAl
         const isMe = p.puuid === mePuuid
         return {
           team: p.teamId,
-          agent: AGENT_NAMES[p.characterId] || p.characterId,
+          agent: agentName(p.characterId, agentMap),
           name: isMe || unmaskAll ? `${p.gameName}#${p.tagLine}` : opted[p.puuid] || null,
           rank: TIERS[p.competitiveTier] || null,
           isMe,

@@ -1,3 +1,5 @@
+import { kvConfigured } from '../_lib/optinStore.js'
+
 // GET /api/auth/config — public, non-secret RSO settings the browser needs to
 // start a login (client id + redirect uri are public by OAuth design). Served
 // at runtime so no VITE_/build-time env vars are required. The client SECRET is
@@ -12,5 +14,6 @@ export default function handler(req, res) {
     redirectUri,
     authorizeUrl: process.env.RSO_AUTHORIZE_URL || 'https://auth.riotgames.com/authorize',
     scope: process.env.RSO_SCOPE || 'openid offline_access',
+    kvReady: kvConfigured(), // whether the KV store env vars reached the functions
   })
 }

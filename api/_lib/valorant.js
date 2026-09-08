@@ -11,6 +11,8 @@
  * so this is opt-in compliant.
  */
 
+import { optedInNames } from './optinStore.js'
+
 const HENRIK_BASE = 'https://api.henrikdev.tech/valorant'
 
 // region code -> Riot VAL platform host prefix
@@ -331,6 +333,8 @@ export async function getMatchDetail({ matchId, region = 'na', mePuuid }) {
       const m = await res.json()
       const weaponMap = await getWeaponNames()
       const rounds = (m.roundResults || []).length || 1
+      // Names to un-mask: players who have opted in (plus me).
+      const opted = await optedInNames((m.players || []).map((p) => p.puuid))
 
       // Per-player damage/hits across rounds -> ADR, HS%.
       const acc = {}
@@ -343,7 +347,7 @@ export async function getMatchDetail({ matchId, region = 'na', mePuuid }) {
           agent: AGENT_NAMES[p.characterId] || p.characterId,
           team: p.teamId,
           isMe: p.puuid === mePuuid,
-          name: p.puuid === mePuuid ? `${p.gameName}#${p.tagLine}` : null,
+          name: p.puuid === mePuuid ? `${p.gameName}#${p.tagLine}` : opted[p.puuid] || null,
         }
       }
       for (const rr of m.roundResults || []) {
@@ -364,7 +368,7 @@ export async function getMatchDetail({ matchId, region = 'na', mePuuid }) {
         return {
           team: p.teamId,
           agent: AGENT_NAMES[p.characterId] || p.characterId,
-          name: isMe ? `${p.gameName}#${p.tagLine}` : null, // masked otherwise
+          name: isMe ? `${p.gameName}#${p.tagLine}` : opted[p.puuid] || null, // un-mask opted-in
           rank: TIERS[p.competitiveTier] || null,
           isMe,
           kills: st.kills || 0, deaths: st.deaths || 0, assists: st.assists || 0,
@@ -423,17 +427,15 @@ export async function getMatchDetail({ matchId, region = 'na', mePuuid }) {
   if (!res.ok) throw new Error(`Henrik match ${res.status}`)
   const body = await res.json()
   const d = body.data || {}
-  const meMatch = (d.players?.all_players || []).find(
-    (p) => p.puuid === mePuuid || (mePuuid == null && false)
-  )
   const rounds = d.metadata?.rounds_played || 1
+  const opted = await optedInNames((d.players?.all_players || []).map((p) => p.puuid))
   const players = (d.players?.all_players || []).map((p) => {
     const s = p.stats || {}
     const shots = (s.headshots || 0) + (s.bodyshots || 0) + (s.legshots || 0)
     const isMe = p.puuid === mePuuid
     return {
       team: p.team, agent: p.character,
-      name: isMe ? `${p.name}#${p.tag}` : null,
+      name: isMe ? `${p.name}#${p.tag}` : opted[p.puuid] || null,
       rank: p.currenttier_patched || null,
       isMe,
       kills: s.kills || 0, deaths: s.deaths || 0, assists: s.assists || 0,

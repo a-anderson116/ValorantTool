@@ -1,4 +1,5 @@
 import { signSession } from '../_lib/session.js'
+import { recordOptIn } from '../_lib/optinStore.js'
 
 /**
  * POST /api/auth/token   { code, state }
@@ -84,7 +85,9 @@ export default async function handler(req, res) {
 
     if (!puuid) throw new Error('Could not resolve player identity from Riot')
 
-    // 3) Signing in IS the opt-in. Encode identity + consent into the session.
+    // 3) Signing in IS the opt-in. Record it in the shared registry so this
+    //    player is recognized (un-masked) across the app, then issue a session.
+    await recordOptIn({ puuid, gameName, tagLine })
     const session = signSession({ puuid, gameName, tagLine, optedIn: true })
 
     return res.json({ success: true, session, puuid, gameName, tagLine })

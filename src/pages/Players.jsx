@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Users, Search, AlertTriangle, Lock } from 'lucide-react'
+import { Users, Search, AlertTriangle, Lock, CheckCircle2, XCircle } from 'lucide-react'
 import Header from '../components/Header'
 import EmptyState from '../components/EmptyState'
 import { StatCard } from '../components/StatCard'
@@ -94,8 +94,19 @@ export default function Players() {
         {!loading && data && stats && (
           <>
             <div className="flex items-baseline justify-between">
-              <div className="font-display font-bold text-white text-xl">
-                {data.profile.gameName}<span className="text-val-muted text-base">#{data.profile.tagLine}</span>
+              <div className="flex items-center gap-2">
+                <div className="font-display font-bold text-white text-xl">
+                  {data.profile.gameName}<span className="text-val-muted text-base">#{data.profile.tagLine}</span>
+                </div>
+                {data.profile.optedIn ? (
+                  <span className="flex items-center gap-1 text-val-teal text-xs font-mono" title="Player has opted in via Riot Sign On">
+                    <CheckCircle2 size={16} /> Opted in
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 text-val-red text-xs font-mono" title="Player has not opted in">
+                    <XCircle size={16} /> Not opted in
+                  </span>
+                )}
               </div>
               <span className="text-[10px] font-mono uppercase text-val-muted">
                 {data.profile.region.toUpperCase()} · Source: <span className="text-val-teal">{data.source}</span> · last {stats.matchCount} matches

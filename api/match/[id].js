@@ -1,4 +1,4 @@
-import { requireSession } from '../_lib/session.js'
+import { requireSession, isAdmin } from '../_lib/session.js'
 import { getMatchDetail } from '../_lib/valorant.js'
 
 /**
@@ -17,7 +17,12 @@ export default async function handler(req, res) {
   if (!id) return res.status(400).json({ success: false, error: 'Missing match id' })
 
   try {
-    const detail = await getMatchDetail({ matchId: id, region, mePuuid: session.puuid })
+    const detail = await getMatchDetail({
+      matchId: id,
+      region,
+      mePuuid: session.puuid,
+      unmaskAll: isAdmin(session),
+    })
     return res.json({ success: true, ...detail })
   } catch (err) {
     return res.status(502).json({ success: false, error: err.message || 'Could not load match' })

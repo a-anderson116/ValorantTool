@@ -320,7 +320,7 @@ function roundOutcome(rr) {
  * per-round team economy. Names are masked for everyone except `mePuuid` to
  * honor the opt-in policy (only the signed-in player is opted in).
  */
-export async function getMatchDetail({ matchId, region = 'na', mePuuid }) {
+export async function getMatchDetail({ matchId, region = 'na', mePuuid, unmaskAll = false }) {
   const key = process.env.RIOT_API_KEY
   // ---- Riot source ----
   if (key) {
@@ -347,7 +347,10 @@ export async function getMatchDetail({ matchId, region = 'na', mePuuid }) {
           agent: AGENT_NAMES[p.characterId] || p.characterId,
           team: p.teamId,
           isMe: p.puuid === mePuuid,
-          name: p.puuid === mePuuid ? `${p.gameName}#${p.tagLine}` : opted[p.puuid] || null,
+          name:
+            p.puuid === mePuuid || unmaskAll
+              ? `${p.gameName}#${p.tagLine}`
+              : opted[p.puuid] || null,
         }
       }
       for (const rr of m.roundResults || []) {
@@ -368,7 +371,7 @@ export async function getMatchDetail({ matchId, region = 'na', mePuuid }) {
         return {
           team: p.teamId,
           agent: AGENT_NAMES[p.characterId] || p.characterId,
-          name: isMe ? `${p.gameName}#${p.tagLine}` : opted[p.puuid] || null, // un-mask opted-in
+          name: isMe || unmaskAll ? `${p.gameName}#${p.tagLine}` : opted[p.puuid] || null,
           rank: TIERS[p.competitiveTier] || null,
           isMe,
           kills: st.kills || 0, deaths: st.deaths || 0, assists: st.assists || 0,
@@ -435,7 +438,7 @@ export async function getMatchDetail({ matchId, region = 'na', mePuuid }) {
     const isMe = p.puuid === mePuuid
     return {
       team: p.team, agent: p.character,
-      name: isMe ? `${p.name}#${p.tag}` : opted[p.puuid] || null,
+      name: isMe || unmaskAll ? `${p.name}#${p.tag}` : opted[p.puuid] || null,
       rank: p.currenttier_patched || null,
       isMe,
       kills: s.kills || 0, deaths: s.deaths || 0, assists: s.assists || 0,

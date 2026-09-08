@@ -43,6 +43,20 @@ export function bearer(req) {
   return (req.headers.authorization || '').replace(/^Bearer\s+/i, '')
 }
 
+/**
+ * Owner/admin override. Configure ADMIN_RIOT_IDS (comma-separated
+ * "gameName#tagLine") and/or ADMIN_PUUIDS in the environment. An admin session
+ * may see all players un-masked. Kept in env so no real account lives in code.
+ */
+export function isAdmin(session) {
+  if (!session) return false
+  const list = (v) => (v || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)
+  const puuids = list(process.env.ADMIN_PUUIDS)
+  const ids = list(process.env.ADMIN_RIOT_IDS)
+  const rid = `${session.gameName || ''}#${session.tagLine || ''}`.toLowerCase()
+  return puuids.includes(String(session.puuid || '').toLowerCase()) || ids.includes(rid)
+}
+
 /** Verify the session on a request, or send 401. Returns the session or null. */
 export function requireSession(req, res) {
   const session = verifySession(bearer(req))

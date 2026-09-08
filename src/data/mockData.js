@@ -11,7 +11,7 @@ export const AGENT_COLORS = {
   Sova: '#4B8BBE', Cypher: '#C9B26A', Viper: '#3FA464',
   Fade: '#8B6B9A', Brimstone: '#D4703A', Killjoy: '#F5C542',
   Neon: '#5B9BD5', Phoenix: '#E8873A', Sage: '#6FC4A0',
-  Breach: '#C4784B', Skye: '#7BAF5C', Astra: '#9B6BB5',
+  Breach: '#C4784B', Skye: '#7BAF5C', Astra: '#9B6BB5', Veto: '#A64D9E',
 }
 
 export const ROLE_COLORS = {

@@ -62,6 +62,7 @@ const AGENT_NAMES = {
   'efba5359-4016-a1e5-7626-b1ae76895940': 'Vyse',
   'df1cb487-4902-002e-5c17-d28e83e78588': 'Waylay',
   'b444168c-4e35-8076-db47-ef9bf368f384': 'Tejo',
+  '92eeef5d-43b5-1d4a-8d03-b3927a09034b': 'Veto',
 }
 
 function henrikHeaders() {

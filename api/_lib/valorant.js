@@ -517,6 +517,46 @@ export async function resolvePuuid(gameName, tagLine, region = 'na') {
   }
 }
 
+/**
+ * Current + peak rank via the community MMR data (works without VAL-RANKED
+ * approval). Tries the newer v3 shape, falls back to v2. Returns null if
+ * unavailable (e.g. unranked or rate-limited).
+ */
+export async function getRank({ gameName, tagLine, region = 'na' }) {
+  const enc = encodeURIComponent
+  try {
+    const r = await fetch(`${HENRIK_BASE}/v3/mmr/${region}/pc/${enc(gameName)}/${enc(tagLine)}`, { headers: henrikHeaders() })
+    if (r.ok) {
+      const d = (await r.json()).data || {}
+      if (d.current || d.peak) {
+        return {
+          current: d.current?.tier?.name || null,
+          rr: d.current?.rr ?? null,
+          peak: d.peak?.tier?.name || null,
+          peakSeason: d.peak?.season?.short || null,
+        }
+      }
+    }
+  } catch {
+    /* fall through to v2 */
+  }
+  try {
+    const r = await fetch(`${HENRIK_BASE}/v2/mmr/${region}/${enc(gameName)}/${enc(tagLine)}`, { headers: henrikHeaders() })
+    if (r.ok) {
+      const d = (await r.json()).data || {}
+      return {
+        current: d.current_data?.currenttierpatched || null,
+        rr: d.current_data?.ranking_in_tier ?? null,
+        peak: d.highest_rank?.patched_tier || null,
+        peakSeason: d.highest_rank?.season || null,
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  return null
+}
+
 // ---- Public entry ----------------------------------------------------------
 export async function getPlayerData({ puuid, gameName, tagLine, region = 'na', count = 10 }) {
   // Try Riot first when a key + puuid are available; fall back to Henrik on any

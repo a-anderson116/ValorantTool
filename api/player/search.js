@@ -1,5 +1,5 @@
 import { requireSession, isAdmin } from '../_lib/session.js'
-import { getPlayerData, resolvePuuid } from '../_lib/valorant.js'
+import { getPlayerData, resolvePuuid, getRank } from '../_lib/valorant.js'
 import { isOptedIn } from '../_lib/optinStore.js'
 
 /**
@@ -24,9 +24,10 @@ export default async function handler(req, res) {
 
   try {
     const puuid = await resolvePuuid(name, tag, region)
-    const [{ source, matches, stats }, optedIn] = await Promise.all([
+    const [{ source, matches, stats }, optedIn, rank] = await Promise.all([
       getPlayerData({ puuid, gameName: name, tagLine: tag, region, count: 20 }),
       puuid ? isOptedIn(puuid) : Promise.resolve(false),
+      getRank({ gameName: name, tagLine: tag, region }),
     ])
     if (!matches.length && !puuid) {
       return res.status(404).json({ success: false, error: `No player found for ${name}#${tag} in ${region.toUpperCase()}.` })
@@ -35,6 +36,7 @@ export default async function handler(req, res) {
       success: true,
       source,
       profile: { puuid, gameName: name, tagLine: tag, region, optedIn },
+      rank,
       stats,
       matches,
     })

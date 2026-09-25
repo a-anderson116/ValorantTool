@@ -1,5 +1,5 @@
 import { requireSession } from '../_lib/session.js'
-import { getPlayerData } from '../_lib/valorant.js'
+import { getPlayerData, getRank } from '../_lib/valorant.js'
 
 /**
  * GET /api/player/me?region=na&count=10
@@ -16,13 +16,10 @@ export default async function handler(req, res) {
   const count = Math.min(parseInt(req.query.count, 10) || 10, 20)
 
   try {
-    const { source, matches, stats } = await getPlayerData({
-      puuid: session.puuid,
-      gameName: session.gameName,
-      tagLine: session.tagLine,
-      region,
-      count,
-    })
+    const [{ source, matches, stats }, rank] = await Promise.all([
+      getPlayerData({ puuid: session.puuid, gameName: session.gameName, tagLine: session.tagLine, region, count }),
+      getRank({ gameName: session.gameName, tagLine: session.tagLine, region }),
+    ])
 
     return res.json({
       success: true,
@@ -33,6 +30,7 @@ export default async function handler(req, res) {
         tagLine: session.tagLine,
         region,
       },
+      rank,
       stats,
       matches,
     })

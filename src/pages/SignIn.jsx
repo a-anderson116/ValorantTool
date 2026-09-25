@@ -1,6 +1,9 @@
 import { ShieldCheck, LogIn } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { setSession } from '../services/auth'
+import { Mark } from '../components/Brandmark'
+import { BRAND } from '../config/brand'
+import { ACTIVE_GAME } from '../config/games'
 
 export default function SignIn() {
   const { login, configured } = useAuth()
@@ -15,15 +18,19 @@ export default function SignIn() {
   return (
     <div className="min-h-screen bg-val-darker flex items-center justify-center p-6">
       <div className="w-full max-w-md">
-        <div className="flex items-center justify-center mb-8">
-          <img src="/logo.png" alt="VCT — Valorant Collegiate Tool" className="w-52 h-auto" />
+        <div className="flex flex-col items-center justify-center mb-8">
+          <Mark className="w-14 h-14" textClass="text-xl" />
+          <div className="mt-3 text-center">
+            <div className="font-display font-bold text-white text-xl tracking-wide leading-tight">{BRAND.wordmarkTop}</div>
+            <div className="text-val-muted text-[11px] font-mono tracking-widest uppercase">{BRAND.wordmarkBottom}</div>
+          </div>
         </div>
 
         <div className="bg-val-card border border-val-border rounded-xl p-8 text-center">
           <h1 className="font-display font-bold text-white text-2xl uppercase tracking-wide mb-2">Sign in to continue</h1>
           <p className="text-val-muted text-sm leading-relaxed mb-6">
-            VCT Scout uses Riot Sign On. Your VALORANT stats are only displayed after
-            you sign in and opt in — nothing is shown for players who haven't.
+            {BRAND.name} uses Riot Sign On for {ACTIVE_GAME.name}. Your stats are only
+            displayed after you sign in and opt in — nothing is shown for players who haven't.
           </p>
 
           <button
@@ -56,8 +63,8 @@ export default function SignIn() {
           <div className="flex items-start gap-2 mt-6 pt-6 border-t border-val-border text-left">
             <ShieldCheck size={14} className="text-val-teal flex-shrink-0 mt-0.5" />
             <p className="text-val-muted text-[11px] leading-relaxed">
-              By signing in you consent to VCT Scout displaying your VALORANT match and
-              statistics data for scouting purposes. You can withdraw consent anytime by
+              By signing in you consent to {BRAND.name} displaying your {ACTIVE_GAME.name} match
+              and statistics data for scouting purposes. You can withdraw consent anytime by
               logging out and revoking access in your Riot account settings.
             </p>
           </div>
@@ -69,7 +76,7 @@ export default function SignIn() {
           <a href="/terms" className="text-val-teal hover:underline">Terms of Service</a>
         </p>
         <p className="text-center text-val-muted/60 text-[10px] mt-3 leading-relaxed max-w-sm mx-auto">
-          VCT Scout isn't endorsed by Riot Games and doesn't reflect the views of Riot Games.
+          {BRAND.name} isn't endorsed by Riot Games and doesn't reflect the views of Riot Games.
           VALORANT and Riot Games are trademarks of Riot Games, Inc.
         </p>
       </div>

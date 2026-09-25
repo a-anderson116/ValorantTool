@@ -1,5 +1,5 @@
 import { requireSession } from '../_lib/session.js'
-import { getPlayerData, getRank } from '../_lib/valorant.js'
+import { getPlayerData } from '../_lib/valorant.js'
 
 /**
  * GET /api/player/me?region=na&count=10
@@ -13,13 +13,14 @@ export default async function handler(req, res) {
   if (!session) return
 
   const region = (req.query.region || 'na').toString().toLowerCase()
-  const count = Math.min(parseInt(req.query.count, 10) || 10, 20)
+  // Fetch a deeper window so the profile covers the whole current act (the data
+  // layer filters to the act and derives rank from it).
+  const count = Math.min(parseInt(req.query.count, 10) || 40, 50)
 
   try {
-    const [{ source, matches, stats }, rank] = await Promise.all([
-      getPlayerData({ puuid: session.puuid, gameName: session.gameName, tagLine: session.tagLine, region, count }),
-      getRank({ gameName: session.gameName, tagLine: session.tagLine, region }),
-    ])
+    const { source, matches, stats, rank } = await getPlayerData({
+      puuid: session.puuid, gameName: session.gameName, tagLine: session.tagLine, region, count,
+    })
 
     return res.json({
       success: true,

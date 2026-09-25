@@ -220,7 +220,7 @@ async function fromHenrik({ gameName, tagLine, region, count }) {
     })
     .filter(Boolean)
 
-  return { source: 'henrik', matches, stats: aggregate(matches) }
+  return { source: 'henrik', matches, stats: aggregate(matches), rank: null }
 }
 
 // ---- Riot source (VAL-MATCH-V1) -------------------------------------------
@@ -234,17 +234,20 @@ async function fromRiot({ puuid, region, count }) {
   const list = await listRes.json()
   const ids = (list.history || []).slice(0, count).map((h) => h.matchId)
 
-  const [details, weaponMap, agentMap] = await Promise.all([
-    Promise.all(
-      ids.map((id) =>
+  const [weaponMap, agentMap] = await Promise.all([getWeaponNames(), getAgentNames()])
+  // Fetch details in batches of 10 to cover more matches without tripping the
+  // per-second rate limit.
+  const details = []
+  for (let i = 0; i < ids.length; i += 10) {
+    const chunk = await Promise.all(
+      ids.slice(i, i + 10).map((id) =>
         fetch(`${host}/val/match/v1/matches/${id}`, { headers: { 'X-Riot-Token': key } })
           .then((r) => (r.ok ? r.json() : null))
           .catch(() => null)
       )
-    ),
-    getWeaponNames(),
-    getAgentNames(),
-  ])
+    )
+    details.push(...chunk)
+  }
 
   const matches = details
     .filter(Boolean)
@@ -313,11 +316,32 @@ async function fromRiot({ puuid, region, count }) {
         hsPct: shots ? Math.round((hs / shots) * 100) : 0,
         weapons,
         fk, fd, k2, k3, k4, k5,
+        seasonId: m.matchInfo?.seasonId || null,
+        tier: p.competitiveTier || 0,
       }
     })
     .filter(Boolean)
 
-  return { source: 'riot', matches, stats: aggregate(matches) }
+  // Filter to the current act (season of the most recent match) so stats cover
+  // the whole act. Keep season-less matches too (customs/scrims often have no
+  // seasonId) so those aren't dropped.
+  const currentAct = matches[0]?.seasonId
+  const actMatches = currentAct
+    ? matches.filter((m) => !m.seasonId || m.seasonId === currentAct)
+    : matches
+
+  // Current + peak rank from this act's competitive games (list is newest-first).
+  const comp = actMatches.filter((m) => m.mode === 'Competitive' && m.tier)
+  const rank = comp.length
+    ? {
+        current: TIERS[comp[0].tier] || null,
+        peak: TIERS[Math.max(...comp.map((m) => m.tier))] || null,
+        rr: null,
+        peakSeason: null,
+      }
+    : null
+
+  return { source: 'riot', matches: actMatches, stats: aggregate(actMatches), rank }
 }
 
 // Competitive tier number -> rank name.
@@ -571,7 +595,7 @@ export async function getPlayerData({ puuid, gameName, tagLine, region = 'na', c
   if (gameName && tagLine) {
     return await fromHenrik({ gameName, tagLine, region, count })
   }
-  return { source: 'none', matches: [], stats: emptyStats() }
+  return { source: 'none', matches: [], stats: emptyStats(), rank: null }
 }
 
 /**

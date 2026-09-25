@@ -5,7 +5,7 @@ import { useMyProfile, REGIONS } from '../hooks/useMyProfile'
 
 export default function Profile() {
   const { session } = useAuth()
-  const { data, loading, error, region, setRegion } = useMyProfile(20)
+  const { data, loading, error, region, setRegion } = useMyProfile(40)
 
   const regionSelector = (
     <div className="flex items-center gap-2 text-val-muted text-xs font-mono uppercase tracking-wider">

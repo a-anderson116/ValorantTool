@@ -139,7 +139,7 @@ function Overview({ stats, matches, mode, navigate }) {
   return (
     <div className="space-y-6">
       <div className="text-val-muted text-xs font-mono uppercase tracking-wider">
-        {mode === 'all' ? 'All modes' : mode} · {stats.matchCount} matches
+        {mode === 'all' ? 'All modes' : mode} · {stats.matchCount} matches · this act
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <StatCard label="Matches" value={stats.matchCount} />

@@ -533,3 +533,97 @@ export async function getPlayerData({ puuid, gameName, tagLine, region = 'na', c
   }
   return { source: 'none', matches: [], stats: emptyStats() }
 }
+
+/**
+ * Team stats from matches the roster played TOGETHER only.
+ *
+ * members: [{ puuid, name, tag }] (already opt-in-filtered by the caller).
+ * A match "counts" when >= 2 roster members appear in it. Per-member stats and
+ * the team map pool are computed from those shared matches only. Riot key
+ * required (val/match/v1).
+ */
+export async function getSharedMatchStats({ members, region = 'na', count = 15, maxShared = 15 }) {
+  const key = process.env.RIOT_API_KEY
+  const host = `https://${PLATFORM[region] || 'na'}.api.riotgames.com`
+  const rosterPuuids = new Set(members.map((m) => m.puuid).filter(Boolean))
+  if (!key || rosterPuuids.size < 2) {
+    return { sharedMatchCount: 0, perMember: {}, maps: [] }
+  }
+
+  // 1) Recent match ids per member.
+  const lists = await Promise.all(
+    [...rosterPuuids].map(async (puuid) => {
+      try {
+        const r = await fetch(`${host}/val/match/v1/matchlists/by-puuid/${puuid}`, { headers: { 'X-Riot-Token': key } })
+        if (!r.ok) return { puuid, ids: [] }
+        const d = await r.json()
+        return { puuid, ids: (d.history || []).slice(0, count).map((h) => h.matchId) }
+      } catch {
+        return { puuid, ids: [] }
+      }
+    })
+  )
+
+  // 2) Match ids shared by >= 2 roster members.
+  const tally = {}
+  for (const l of lists) for (const id of l.ids) (tally[id] = tally[id] || new Set()).add(l.puuid)
+  const shared = Object.entries(tally).filter(([, s]) => s.size >= 2).map(([id]) => id).slice(0, maxShared)
+  if (!shared.length) return { sharedMatchCount: 0, perMember: {}, maps: [] }
+
+  // 3) Pull those match details and aggregate only roster members.
+  const [details, agentMap] = await Promise.all([
+    Promise.all(shared.map((id) =>
+      fetch(`${host}/val/match/v1/matches/${id}`, { headers: { 'X-Riot-Token': key } })
+        .then((r) => (r.ok ? r.json() : null)).catch(() => null)
+    )),
+    getAgentNames(),
+  ])
+
+  const perMember = {}
+  const mapPool = {}
+  for (const m of details.filter(Boolean)) {
+    const rounds = (m.roundResults || []).length || 1
+    const acc = {}
+    for (const rr of m.roundResults || []) {
+      for (const ps of rr.playerStats || []) {
+        if (!rosterPuuids.has(ps.puuid)) continue
+        const a = (acc[ps.puuid] = acc[ps.puuid] || { dmg: 0, hs: 0, bs: 0, ls: 0 })
+        for (const d of ps.damage || []) {
+          a.dmg += d.damage || 0; a.hs += d.headshots || 0; a.bs += d.bodyshots || 0; a.ls += d.legshots || 0
+        }
+      }
+    }
+    const rosterPlayers = (m.players || []).filter((p) => rosterPuuids.has(p.puuid))
+    // team map pool from the roster's majority team
+    const teamCount = {}
+    for (const p of rosterPlayers) teamCount[p.teamId] = (teamCount[p.teamId] || 0) + 1
+    const rosterTeam = Object.entries(teamCount).sort((a, b) => b[1] - a[1])[0]?.[0]
+    const rosterWon = (m.teams || []).find((t) => t.teamId === rosterTeam)?.won
+    const codename = (m.matchInfo?.mapId || '').split('/').pop()
+    const mapName = MAP_NAMES[codename] || codename
+    if (mapName) {
+      const mp = (mapPool[mapName] = mapPool[mapName] || { wins: 0, losses: 0 })
+      rosterWon ? mp.wins++ : mp.losses++
+    }
+    for (const p of rosterPlayers) {
+      const st = p.stats || {}
+      const a = acc[p.puuid] || { dmg: 0, hs: 0, bs: 0, ls: 0 }
+      const shots = a.hs + a.bs + a.ls
+      const pm = (perMember[p.puuid] = perMember[p.puuid] || { matches: 0, wins: 0, kills: 0, deaths: 0, acs: 0, adr: 0, hs: 0, agents: {} })
+      pm.matches++
+      if ((m.teams || []).find((t) => t.teamId === p.teamId)?.won) pm.wins++
+      pm.kills += st.kills || 0; pm.deaths += st.deaths || 0
+      pm.acs += st.score ? st.score / rounds : 0
+      pm.adr += a.dmg / rounds
+      pm.hs += shots ? (a.hs / shots) * 100 : 0
+      const ag = agentName(p.characterId, agentMap)
+      if (ag) pm.agents[ag] = (pm.agents[ag] || 0) + 1
+    }
+  }
+
+  const maps = Object.entries(mapPool)
+    .map(([map, { wins, losses }]) => ({ map, wins, losses, wr: Math.round((wins / (wins + losses)) * 100) }))
+    .sort((a, b) => b.wins + b.losses - (a.wins + a.losses))
+
+  return { sharedMatchCount: shared.length, perMember, maps }
+}

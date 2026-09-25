@@ -167,12 +167,24 @@ export default function Teams() {
                 {statsErr && <div className="text-val-red text-xs font-mono">{statsErr}</div>}
                 {stats && (
                   <div className="space-y-4">
+                    <div className="text-xs font-mono text-val-muted">
+                      Stats from{' '}
+                      <span className="text-val-teal font-bold">{stats.sharedMatchCount}</span>{' '}
+                      {stats.sharedMatchCount === 1 ? 'match' : 'matches'} the roster played together (recent history).
+                    </div>
+
+                    {stats.sharedMatchCount === 0 ? (
+                      <div className="text-val-muted text-sm">
+                        No recent matches found where these players played together. Add players who queue as a team,
+                        or they may need to play more games together.
+                      </div>
+                    ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="text-val-muted text-[10px] font-mono uppercase">
                             <th className="text-left py-2 px-2">Player</th>
-                            <th className="text-center py-2 px-2">Matches</th>
+                            <th className="text-center py-2 px-2">Together</th>
                             <th className="text-center py-2 px-2">WR</th>
                             <th className="text-center py-2 px-2">ACS</th>
                             <th className="text-center py-2 px-2">K/D</th>
@@ -184,9 +196,13 @@ export default function Teams() {
                           {stats.players.map((p, i) => (
                             <tr key={i} className="border-t border-val-border/50">
                               <td className="py-2 px-2 text-white font-display font-semibold">{p.name}<span className="text-val-muted">#{p.tag}</span></td>
-                              {p.optedIn ? (
+                              {!p.optedIn ? (
+                                <td colSpan={6} className="py-2 px-2 text-val-muted italic text-xs">Not opted in — no data</td>
+                              ) : !p.sharedMatches ? (
+                                <td colSpan={6} className="py-2 px-2 text-val-muted italic text-xs">No shared games in recent history</td>
+                              ) : (
                                 <>
-                                  <td className="py-2 px-2 text-center font-mono text-white">{p.matchCount}</td>
+                                  <td className="py-2 px-2 text-center font-mono text-white">{p.sharedMatches}</td>
                                   <td className="py-2 px-2 text-center font-mono" style={{ color: p.wr >= 50 ? '#00C8BE' : '#FF4655' }}>{p.wr}%</td>
                                   <td className="py-2 px-2 text-center font-mono text-white">{p.acs}</td>
                                   <td className="py-2 px-2 text-center font-mono text-white">{p.kd}</td>
@@ -200,18 +216,17 @@ export default function Teams() {
                                     </div>
                                   </td>
                                 </>
-                              ) : (
-                                <td colSpan={6} className="py-2 px-2 text-val-muted italic text-xs">Not opted in — no data</td>
                               )}
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
+                    )}
 
                     {stats.maps?.length > 0 && (
                       <div>
-                        <div className="section-label mb-2">Combined Map Pool</div>
+                        <div className="section-label mb-2">Map Pool — games together</div>
                         <div className="space-y-1.5">
                           {stats.maps.map((mp) => (
                             <div key={mp.map} className="flex items-center gap-3 text-sm">

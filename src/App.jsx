@@ -3,14 +3,10 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import Sidebar from './components/Sidebar'
 import OptInDisclaimer from './components/OptInDisclaimer'
 import SignIn from './pages/SignIn'
-import Dashboard from './pages/Dashboard'
-import Matches from './pages/Matches'
+import Profile from './pages/Profile'
 import MatchDetail from './pages/MatchDetail'
 import Teams from './pages/Teams'
 import Players from './pages/Players'
-import MapIntel from './pages/MapIntel'
-import Scout from './pages/Scout'
-import Reports from './pages/Reports'
 
 function AppShell() {
   const { isAuthenticated, loading } = useAuth()
@@ -32,14 +28,10 @@ function AppShell() {
       <main className="flex-1 ml-16 lg:ml-56 min-h-screen bg-val-darker overflow-x-hidden flex flex-col">
         <div className="flex-1">
           <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/matches" element={<Matches />} />
+            <Route path="/" element={<Profile />} />
             <Route path="/matches/:id" element={<MatchDetail />} />
             <Route path="/teams" element={<Teams />} />
             <Route path="/players" element={<Players />} />
-            <Route path="/maps" element={<MapIntel />} />
-            <Route path="/scout" element={<Scout />} />
-            <Route path="/reports" element={<Reports />} />
           </Routes>
         </div>
         <OptInDisclaimer />

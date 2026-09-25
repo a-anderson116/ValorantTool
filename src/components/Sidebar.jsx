@@ -1,22 +1,18 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Users, Swords, Map, FileText, Search, Trophy, LogOut, Gamepad2 } from 'lucide-react'
+import { User, Search, Trophy, LogOut, Gamepad2 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import Brandmark, { Mark } from './Brandmark'
 import { ACTIVE_GAME } from '../config/games'
 
-const navItems = [
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/matches', icon: Swords, label: 'Matches' },
-  { to: '/teams', icon: Trophy, label: 'Teams' },
-  { to: '/players', icon: Users, label: 'Players' },
-  { to: '/maps', icon: Map, label: 'Map Intel' },
-  { to: '/scout', icon: Search, label: 'Scout' },
-  { to: '/reports', icon: FileText, label: 'Reports' },
-]
-
 export default function Sidebar() {
-  const { session, logout } = useAuth()
+  const { session, logout, isAdmin } = useAuth()
   const riotId = session?.gameName ? `${session.gameName}#${session.tagLine}` : 'Signed in'
+
+  const navItems = [
+    { to: '/', icon: User, label: 'Profile' },
+    { to: '/teams', icon: Trophy, label: 'Teams' },
+    ...(isAdmin ? [{ to: '/players', icon: Search, label: 'Search' }] : []),
+  ]
 
   return (
     <aside className="w-16 lg:w-56 h-screen bg-val-darker border-r border-val-border flex flex-col fixed left-0 top-0 z-30">
